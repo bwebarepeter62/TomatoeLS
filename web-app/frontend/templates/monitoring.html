@@ -35,13 +35,44 @@
   </div>
 </div>
 
+<!-- Dashboard Filter Toolbar -->
+<section class="card filter-toolbar-card" style="margin-bottom:20px; padding:16px 20px;">
+  <div class="filter-controls-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:14px; align-items:flex-end;">
+    <div class="filter-group">
+      <label for="dash-farm-filter" class="filter-label" style="font-weight:600; font-size:0.85rem; color:var(--ink); margin-bottom:6px; display:block;">Filter by Farm Plot</label>
+      <select id="dash-farm-filter" class="form-control" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid #d1d5db;">
+        <option value="">All Farm Plots</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label for="dash-date-from" class="filter-label" style="font-weight:600; font-size:0.85rem; color:var(--ink); margin-bottom:6px; display:block;">From Date</label>
+      <input type="date" id="dash-date-from" class="form-control" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid #d1d5db;" />
+    </div>
+
+    <div class="filter-group">
+      <label for="dash-date-to" class="filter-label" style="font-weight:600; font-size:0.85rem; color:var(--ink); margin-bottom:6px; display:block;">To Date</label>
+      <input type="date" id="dash-date-to" class="form-control" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid #d1d5db;" />
+    </div>
+
+    <div class="filter-group" style="display:flex; gap:8px;">
+      <button type="button" id="dash-filter-btn" class="primary-btn small-btn" style="height:40px; padding:0 16px;">
+        <i class="fa-solid fa-filter" style="margin-right:6px;"></i> Apply Filter
+      </button>
+      <button type="button" id="dash-reset-btn" class="ghost-btn small-btn" style="height:40px; padding:0 12px;">
+        <i class="fa-solid fa-rotate-left"></i>
+      </button>
+    </div>
+  </div>
+</section>
+
 <!-- Dynamic Contextual Alerts -->
 <div id="alerts-container" class="dashboard-alerts-grid">
   <!-- Populated dynamically via JS -->
 </div>
 
-<!-- 4 KPI Summary Cards -->
-<section class="kpi-grid">
+<!-- 6 KPI Summary Cards -->
+<section class="kpi-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:16px;">
   <article class="card kpi-card">
     <div class="kpi-icon-wrap" style="background:#eaf8ea; color:var(--primary);">
       <i class="fa-solid fa-tractor"></i>
@@ -49,7 +80,7 @@
     <div class="kpi-content">
       <span class="meta-label">Total Farms</span>
       <h3 id="kpi-total-farms" class="kpi-value">—</h3>
-      <a href="{{ url_for('farms_page') }}" class="kpi-link">Manage registered plots &rarr;</a>
+      <a href="{{ url_for('farms_page') }}" class="kpi-link">Manage plots &rarr;</a>
     </div>
   </article>
 
@@ -58,9 +89,9 @@
       <i class="fa-solid fa-qrcode"></i>
     </div>
     <div class="kpi-content">
-      <span class="meta-label">Total Scans Performed</span>
+      <span class="meta-label">Total Scans</span>
       <h3 id="kpi-total-scans" class="kpi-value">—</h3>
-      <a href="{{ url_for('history_page') }}" class="kpi-link">Browse all scan records &rarr;</a>
+      <a href="{{ url_for('history_page') }}" class="kpi-link">All records &rarr;</a>
     </div>
   </article>
 
@@ -69,26 +100,52 @@
       <i class="fa-solid fa-circle-check"></i>
     </div>
     <div class="kpi-content">
-      <span class="meta-label">Healthy Predictions</span>
+      <span class="meta-label">Healthy Leaves</span>
       <div class="kpi-value-row">
         <h3 id="kpi-healthy-scans" class="kpi-value">—</h3>
         <span id="kpi-healthy-rate" class="rate-badge rate-healthy">0%</span>
       </div>
-      <small class="kpi-hint">Scans confirmed symptom-free</small>
+      <small class="kpi-hint">Symptom-free</small>
+    </div>
+  </article>
+
+  <article class="card kpi-card">
+    <div class="kpi-icon-wrap" style="background:#fffbeb; color:#d97706;">
+      <i class="fa-solid fa-circle-dot"></i>
+    </div>
+    <div class="kpi-content">
+      <span class="meta-label">Early Blight</span>
+      <div class="kpi-value-row">
+        <h3 id="kpi-early-blight-scans" class="kpi-value">—</h3>
+      </div>
+      <small class="kpi-hint">Concentric spots</small>
+    </div>
+  </article>
+
+  <article class="card kpi-card">
+    <div class="kpi-icon-wrap" style="background:#fef2f2; color:#dc2626;">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+    </div>
+    <div class="kpi-content">
+      <span class="meta-label">Late Blight</span>
+      <div class="kpi-value-row">
+        <h3 id="kpi-late-blight-scans" class="kpi-value">—</h3>
+      </div>
+      <small class="kpi-hint" style="color:#b91c1c;">Water-soaked lesions</small>
     </div>
   </article>
 
   <article class="card kpi-card">
     <div class="kpi-icon-wrap" style="background:#fff0ee; color:var(--danger);">
-      <i class="fa-solid fa-triangle-exclamation"></i>
+      <i class="fa-solid fa-chart-pie"></i>
     </div>
     <div class="kpi-content">
-      <span class="meta-label">Disease Detections</span>
+      <span class="meta-label">Disease Rate</span>
       <div class="kpi-value-row">
         <h3 id="kpi-disease-scans" class="kpi-value">—</h3>
         <span id="kpi-disease-rate" class="rate-badge rate-danger">0%</span>
       </div>
-      <small class="kpi-hint">Pathogens or pest detections</small>
+      <small class="kpi-hint">Pathogen presence</small>
     </div>
   </article>
 </section>
@@ -151,6 +208,40 @@
   </div>
 </section>
 
+<!-- Farm-Specific Disease Breakdown -->
+<section class="farm-breakdown-section" style="margin-top: 2rem; margin-bottom: 2rem;">
+  <div class="section-header" style="margin-bottom:18px;">
+    <div>
+      <p class="eyebrow accent">Plot Analytics</p>
+      <h3>Farm Health & Disease Distribution</h3>
+    </div>
+  </div>
+
+  <div class="card recent-table-card">
+    <div class="table-responsive">
+      <table class="data-table" id="farm-breakdown-table">
+        <thead>
+          <tr>
+            <th>Farm Name</th>
+            <th>Total Scans</th>
+            <th>Healthy</th>
+            <th>Early Blight</th>
+            <th>Late Blight</th>
+            <th>Disease Incidence</th>
+          </tr>
+        </thead>
+        <tbody id="farm-breakdown-tbody">
+          <tr>
+            <td colspan="6" class="text-center" style="padding:24px; color:var(--muted);">
+              Loading farm breakdown...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
 <!-- Recent Field Activity -->
 <section class="recent-activity-section">
   <div class="section-header" style="margin-bottom:18px;">
@@ -195,9 +286,41 @@
   let diseaseChart = null;
   let timelineChart = null;
 
+  async function loadFarmFilterOptions() {
+    try {
+      const res = await fetch('/api/farms');
+      const data = await res.json();
+      if (!res.ok) return;
+      const select = document.getElementById('dash-farm-filter');
+      if (!select) return;
+
+      const currentVal = select.value;
+      select.innerHTML = '<option value="">All Farms</option>';
+      (data.farms || []).forEach(f => {
+        const opt = document.createElement('option');
+        opt.value = f.id;
+        opt.textContent = f.name;
+        select.appendChild(opt);
+      });
+      if (currentVal) select.value = currentVal;
+    } catch (e) {
+      console.warn('Could not populate farm filter dropdown:', e);
+    }
+  }
+
   async function loadDashboard() {
     try {
-      const res = await fetch('/api/dashboard/stats');
+      const farmSelect = document.getElementById('dash-farm-filter');
+      const dateFromInput = document.getElementById('dash-date-from');
+      const dateToInput = document.getElementById('dash-date-to');
+
+      const params = new URLSearchParams();
+      if (farmSelect && farmSelect.value) params.append('farm_id', farmSelect.value);
+      if (dateFromInput && dateFromInput.value) params.append('date_from', dateFromInput.value);
+      if (dateToInput && dateToInput.value) params.append('date_to', dateToInput.value);
+
+      const qs = params.toString() ? `?${params.toString()}` : '';
+      const res = await fetch(`/api/dashboard/stats${qs}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to fetch dashboard metrics');
       
@@ -205,18 +328,23 @@
       renderKPIs(stats);
       renderAlerts(stats.alerts);
       renderCharts(stats);
+      renderFarmBreakdown(stats.farm_breakdown);
       renderRecentScans(stats.recent_scans);
     } catch (err) {
       console.error(err);
-      showToast('Error loading dashboard: ' + err.message, 'error');
+      if (typeof showToast === 'function') {
+        showToast('Error loading dashboard: ' + err.message, 'error');
+      }
     }
   }
 
   function renderKPIs(stats) {
-    document.getElementById('kpi-total-farms').textContent = stats.total_farms.toLocaleString();
-    document.getElementById('kpi-total-scans').textContent = stats.total_scans.toLocaleString();
-    document.getElementById('kpi-healthy-scans').textContent = stats.healthy_scans.toLocaleString();
-    document.getElementById('kpi-disease-scans').textContent = stats.disease_scans.toLocaleString();
+    document.getElementById('kpi-total-farms').textContent = (stats.total_farms || 0).toLocaleString();
+    document.getElementById('kpi-total-scans').textContent = (stats.total_scans || 0).toLocaleString();
+    document.getElementById('kpi-healthy-scans').textContent = (stats.healthy_scans || 0).toLocaleString();
+    document.getElementById('kpi-early-blight-scans').textContent = (stats.early_blight_scans || 0).toLocaleString();
+    document.getElementById('kpi-late-blight-scans').textContent = (stats.late_blight_scans || 0).toLocaleString();
+    document.getElementById('kpi-disease-scans').textContent = (stats.disease_scans || 0).toLocaleString();
 
     document.getElementById('kpi-healthy-rate').textContent = `${stats.healthy_percentage}%`;
     document.getElementById('kpi-disease-rate').textContent = `${stats.disease_percentage}%`;
@@ -235,6 +363,9 @@
       if (alert.level === 'warning') {
         icon = 'fa-triangle-exclamation';
         borderClass = 'alert-warning';
+      } else if (alert.level === 'danger') {
+        icon = 'fa-circle-radiation';
+        borderClass = 'alert-danger';
       } else if (alert.level === 'success') {
         icon = 'fa-circle-check';
         borderClass = 'alert-success';
@@ -267,7 +398,6 @@
     emptyState.classList.add('hidden');
     wrapper.classList.remove('hidden');
 
-    // Chart.js global defaults
     Chart.defaults.font.family = "'Inter', sans-serif";
     Chart.defaults.color = '#5d6f65';
 
@@ -277,10 +407,15 @@
     healthChart = new Chart(ctxHealth, {
       type: 'doughnut',
       data: {
-        labels: ['Healthy', 'Disease-Positive', 'Unclear / Low Match'],
+        labels: ['Healthy', 'Early Blight', 'Late Blight', 'Other / Unclear'],
         datasets: [{
-          data: [stats.healthy_scans, stats.disease_scans, stats.unclear_scans],
-          backgroundColor: ['#1d7b43', '#b35337', '#e6a834'],
+          data: [
+            stats.healthy_scans || 0,
+            stats.early_blight_scans || 0,
+            stats.late_blight_scans || 0,
+            Math.max(0, (stats.disease_scans || 0) - (stats.early_blight_scans || 0) - (stats.late_blight_scans || 0)) + (stats.unclear_scans || 0)
+          ],
+          backgroundColor: ['#1d7b43', '#d97706', '#dc2626', '#9ca3af'],
           borderWidth: 2,
           borderColor: '#ffffff',
           hoverOffset: 6
@@ -290,7 +425,7 @@
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'bottom', labels: { boxWidth: 14, padding: 16 } }
+          legend: { position: 'bottom', labels: { boxWidth: 14, padding: 14 } }
         },
         cutout: '68%'
       }
@@ -300,10 +435,10 @@
     const ctxDisease = document.getElementById('diseaseFrequencyChart').getContext('2d');
     if (diseaseChart) diseaseChart.destroy();
     
-    const diseaseLabels = stats.top_diseases.length > 0 
+    const diseaseLabels = stats.top_diseases && stats.top_diseases.length > 0 
       ? stats.top_diseases.map(d => d.disease_name) 
-      : ['No diseases detected'];
-    const diseaseData = stats.top_diseases.length > 0 
+      : ['No disease records'];
+    const diseaseData = stats.top_diseases && stats.top_diseases.length > 0 
       ? stats.top_diseases.map(d => d.count) 
       : [0];
 
@@ -314,7 +449,7 @@
         datasets: [{
           label: 'Detections',
           data: diseaseData,
-          backgroundColor: '#2361b5',
+          backgroundColor: '#1d7b43',
           borderRadius: 8
         }]
       },
@@ -333,10 +468,10 @@
     const ctxTimeline = document.getElementById('activityTimelineChart').getContext('2d');
     if (timelineChart) timelineChart.destroy();
 
-    const timelineLabels = stats.timeline.map(t => t.scan_date);
-    const totalData = stats.timeline.map(t => t.total);
-    const healthyData = stats.timeline.map(t => t.healthy);
-    const diseaseTimelineData = stats.timeline.map(t => t.disease);
+    const timelineLabels = (stats.timeline || []).map(t => t.scan_date);
+    const totalData = (stats.timeline || []).map(t => t.total);
+    const healthyData = (stats.timeline || []).map(t => t.healthy);
+    const diseaseTimelineData = (stats.timeline || []).map(t => t.disease);
 
     timelineChart = new Chart(ctxTimeline, {
       type: 'line',
@@ -362,7 +497,7 @@
           {
             label: 'Disease Detections',
             data: diseaseTimelineData,
-            borderColor: '#b35337',
+            borderColor: '#dc2626',
             tension: 0.3,
             borderWidth: 2
           }
@@ -377,6 +512,43 @@
         }
       }
     });
+  }
+
+  function renderFarmBreakdown(farms) {
+    const tbody = document.getElementById('farm-breakdown-tbody');
+    if (!tbody) return;
+    if (!farms || farms.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" class="text-center" style="padding:24px; color:var(--muted);">
+            No farm plot scan records available.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = farms.map(f => {
+      const diseaseRate = f.total > 0 ? Math.round((f.disease / f.total) * 100) : 0;
+      let rateBadgeClass = 'rate-healthy';
+      if (diseaseRate > 40) rateBadgeClass = 'rate-danger';
+      else if (diseaseRate > 15) rateBadgeClass = 'rate-warning';
+
+      return `
+        <tr>
+          <td>
+            <strong><i class="fa-solid fa-tractor" style="color:var(--primary); margin-right:6px;"></i> ${escapeHtml(f.farm_name || 'General Plot')}</strong>
+          </td>
+          <td><strong>${f.total}</strong></td>
+          <td><span style="color:#1d7b43; font-weight:600;"><i class="fa-solid fa-check"></i> ${f.healthy}</span></td>
+          <td><span style="color:#d97706; font-weight:600;">${f.early_blight || 0}</span></td>
+          <td><span style="color:#dc2626; font-weight:600;">${f.late_blight || 0}</span></td>
+          <td>
+            <span class="rate-badge ${rateBadgeClass}">${diseaseRate}% disease</span>
+          </td>
+        </tr>
+      `;
+    }).join('');
   }
 
   function renderRecentScans(recentScans) {
@@ -442,6 +614,30 @@
       .replace(/'/g, '&#039;');
   }
 
-  document.addEventListener('DOMContentLoaded', loadDashboard);
+  document.addEventListener('DOMContentLoaded', () => {
+    loadFarmFilterOptions();
+    loadDashboard();
+
+    const filterBtn = document.getElementById('dash-filter-btn');
+    if (filterBtn) {
+      filterBtn.addEventListener('click', loadDashboard);
+    }
+    const resetBtn = document.getElementById('dash-reset-btn');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        const farmSelect = document.getElementById('dash-farm-filter');
+        const dateFromInput = document.getElementById('dash-date-from');
+        const dateToInput = document.getElementById('dash-date-to');
+        if (farmSelect) farmSelect.value = '';
+        if (dateFromInput) dateFromInput.value = '';
+        if (dateToInput) dateToInput.value = '';
+        loadDashboard();
+      });
+    }
+    const farmSelect = document.getElementById('dash-farm-filter');
+    if (farmSelect) {
+      farmSelect.addEventListener('change', loadDashboard);
+    }
+  });
 </script>
 {% endblock %}

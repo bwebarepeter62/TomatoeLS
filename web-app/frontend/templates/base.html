@@ -48,6 +48,18 @@
         <a href="{{ url_for('scan_page') }}" class="nav-cta-btn {% if active_page == 'scan' %}active{% endif %}">
           <i class="fa-solid fa-leaf nav-icon"></i> Scan Leaf
         </a>
+        {% if current_user %}
+        <a href="{{ url_for('profile_page') }}" class="{% if active_page == 'profile' %}active{% endif %}" title="Account Profile">
+          <i class="fa-solid fa-user-circle nav-icon"></i> {{ current_user.username }}
+        </a>
+        <a href="{{ url_for('logout') }}" class="ghost-btn small-btn" title="Sign Out" style="margin-left: 4px; padding: 6px 10px;">
+          <i class="fa-solid fa-right-from-bracket"></i>
+        </a>
+        {% else %}
+        <a href="{{ url_for('login') }}" class="{% if active_page == 'login' %}active{% endif %}" style="margin-left: 6px;">
+          <i class="fa-solid fa-arrow-right-to-bracket nav-icon"></i> Sign In
+        </a>
+        {% endif %}
       </nav>
     </header>
 

@@ -112,6 +112,12 @@ function renderResult(data) {
     viewInHistoryBtn.href = `/history?scan_id=${data.scan_id}`;
   }
 
+  const downloadReportBtn = document.getElementById('download-report-btn');
+  if (downloadReportBtn && data.scan_id) {
+    downloadReportBtn.href = `/api/scans/${data.scan_id}/report`;
+    downloadReportBtn.style.display = 'inline-flex';
+  }
+
   // Smooth scroll into results view
   resultPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }

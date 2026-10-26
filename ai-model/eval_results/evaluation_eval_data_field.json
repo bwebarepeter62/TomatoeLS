@@ -1,0 +1,301 @@
+{
+  "dataset_name": "eval_data_field",
+  "dataset_path": "D:\\projects\\blight\\Leafscan-main\\ai-model\\eval_data_field",
+  "total_images": 233,
+  "correct_images": 122,
+  "overall_accuracy": 52.36,
+  "metrics": {
+    "Early Blight": {
+      "precision": 52.43,
+      "recall": 67.5,
+      "f1_score": 59.02,
+      "support": 80,
+      "tp": 54,
+      "fp": 49,
+      "fn": 26
+    },
+    "Late Blight": {
+      "precision": 52.76,
+      "recall": 72.83,
+      "f1_score": 61.19,
+      "support": 92,
+      "tp": 67,
+      "fp": 60,
+      "fn": 25
+    },
+    "Healthy Leaf": {
+      "precision": 50.0,
+      "recall": 1.64,
+      "f1_score": 3.17,
+      "support": 61,
+      "tp": 1,
+      "fp": 1,
+      "fn": 60
+    }
+  },
+  "healthy_fp_rate": 98.36,
+  "blight_fn_rate": 0.58,
+  "confusion_matrix": {
+    "Early Blight": {
+      "Early Blight": 54,
+      "Late Blight": 25,
+      "Healthy Leaf": 0,
+      "Uncertain / Low Confidence": 1
+    },
+    "Late Blight": {
+      "Early Blight": 24,
+      "Late Blight": 67,
+      "Healthy Leaf": 1,
+      "Uncertain / Low Confidence": 0
+    },
+    "Healthy Leaf": {
+      "Early Blight": 25,
+      "Late Blight": 35,
+      "Healthy Leaf": 1,
+      "Uncertain / Low Confidence": 0
+    }
+  },
+  "misclassified_count": 111,
+  "misclassified_samples": [
+    {
+      "filename": "000.jpg",
+      "folder": "Tomato___Early_blight",
+      "true_label": "Early Blight",
+      "predicted_label": "Late Blight",
+      "confidence": 51.6,
+      "scores": {
+        "Late Blight": 51.6,
+        "Early Blight": 48.4,
+        "Healthy Leaf": 0.0
+      }
+    },
+    {
+      "filename": "002.jpg",
+      "folder": "Tomato___Early_blight",
+      "true_label": "Early Blight",
+      "predicted_label": "Late Blight",
+      "confidence": 56.03,
+      "scores": {
+        "Late Blight": 56.03,
+        "Early Blight": 43.97,
+        "Healthy Leaf": 0.01
+      }
+    },
+    {
+      "filename": "004.jpg",
+      "folder": "Tomato___Early_blight",
+      "true_label": "Early Blight",
+      "predicted_label": "Late Blight",
+      "confidence": 99.88,
+      "scores": {
+        "Late Blight": 99.88,
+        "Early Blight": 0.12,
+        "Healthy Leaf": 0.0
+      }
+    },
+    {
+      "filename": "005.jpg",
+      "folder": "Tomato___Early_blight",
+      "true_label": "Early Blight",
+      "predicted_label": "Late Blight",
+      "confidence": 63.57,
+      "scores": {
+        "Late Blight": 63.57,
+        "Early Blight": 36.43,
+        "Healthy Leaf": 0.0
+      }
+    },
+    {
+      "filename": "012.jpg",
+      "folder": "Tomato___Early_blight",
+      "true_label": "Early Blight",
+      "predicted_label": "Late Blight",
+      "confidence": 88.76,
+      "scores": {
+        "Late Blight": 88.76,
+        "Early Blight": 11.24,
+        "Healthy Leaf": 0.0
+      }
+    },
+    {
+      "filename": "015.jpg",
+      "folder": "Tomato___Early_blight",
+      "true_label": "Early Blight",
+      "predicted_label": "Late Blight",
+      "confidence": 97.82,
+      "scores": {
+        "Late Blight": 97.82,
+        "Early Blight": 2.18,
+        "Healthy Leaf": 0.0
+      }
+    },
+    {
+      "filename": "017.jpg",
+      "folder": "Tomato___Early_blight",
+      "true_label": "Early Blight",
+      "predicted_label": "Late Blight",
+      "confidence": 98.53,
+      "scores": {
+        "Late Blight": 98.53,
+        "Early Blight": 1.47,
+        "Healthy Leaf": 0.0
+      }
+    },
+    {
+      "filename": "023.jpg",
+      "folder": "Tomato___Early_blight",
+      "true_label": "Early Blight",
+      "predicted_label": "Late Blight",
+      "confidence": 93.62,
+      "scores": {
+        "Late Blight": 93.62,
+        "Early Blight": 6.38,
+        "Healthy Leaf": 0.0
+      }
+    },
+    {
+      "filename": "025.jpg",
+      "folder": "Tomato___Early_blight",
+      "true_label": "Early Blight",
+      "predicted_label": "Late Blight",
+      "confidence": 55.61,
+      "scores": {
+        "Late Blight": 55.61,
+        "Early Blight": 44.35,
+        "Healthy Leaf": 0.04
+      }
+    },
+    {
+      "filename": "036.jpg",
+      "folder": "Tomato___Early_blight",
+      "true_label": "Early Blight",
+      "predicted_label": "Late Blight",
+      "confidence": 56.64,
+      "scores": {
+        "Late Blight": 56.64,
+        "Early Blight": 43.36,
+        "Healthy Leaf": 0.0
+      }
+    },
+    {
+      "filename": "038.jpg",
+      "folder": "Tomato___Early_blight",
+      "true_label": "Early Blight",
+      "predicted_label": "Late Blight",
+      "confidence": 71.31,
+      "scores": {
+        "Late Blight": 71.31,
+        "Early Blight": 28.69,
+        "Healthy Leaf": 0.0
+      }
+    },
+    {
+      "filename": "043.jpg",
+      "folder": "Tomato___Early_blight",
+      "true_label": "Early Blight",
+      "predicted_label": "Uncertain / Low Confidence",
+      "confidence": 42.46,
+      "scores": {
+        "Late Blight": 42.46,
+        "Early Blight": 32.64,
+        "Healthy Leaf": 24.9
+      }
+    },
+    {
+      "filename": "051.jpg",
+      "folder": "Tomato___Early_blight",
+      "true_label": "Early Blight",
+      "predicted_label": "Late Blight",
+      "confidence": 91.32,
+      "scores": {
+        "Late Blight": 91.32,
+        "Early Blight": 8.68,
+        "Healthy Leaf": 0.0
+      }
+    },
+    {
+      "filename": "053.jpg",
+      "folder": "Tomato___Early_blight",
+      "true_label": "Early Blight",
+      "predicted_label": "Late Blight",
+      "confidence": 84.64,
+      "scores": {
+        "Late Blight": 84.64,
+        "Early Blight": 15.36,
+        "Healthy Leaf": 0.0
+      }
+    },
+    {
+      "filename": "054.jpg",
+      "folder": "Tomato___Early_blight",
+      "true_label": "Early Blight",
+      "predicted_label": "Late Blight",
+      "confidence": 65.76,
+      "scores": {
+        "Late Blight": 65.76,
+        "Early Blight": 34.24,
+        "Healthy Leaf": 0.01
+      }
+    },
+    {
+      "filename": "056.jpg",
+      "folder": "Tomato___Early_blight",
+      "true_label": "Early Blight",
+      "predicted_label": "Late Blight",
+      "confidence": 99.99,
+      "scores": {
+        "Late Blight": 99.99,
+        "Early Blight": 0.01,
+        "Healthy Leaf": 0.0
+      }
+    },
+    {
+      "filename": "057.jpg",
+      "folder": "Tomato___Early_blight",
+      "true_label": "Early Blight",
+      "predicted_label": "Late Blight",
+      "confidence": 86.9,
+      "scores": {
+        "Late Blight": 86.9,
+        "Early Blight": 13.1,
+        "Healthy Leaf": 0.0
+      }
+    },
+    {
+      "filename": "058.jpg",
+      "folder": "Tomato___Early_blight",
+      "true_label": "Early Blight",
+      "predicted_label": "Late Blight",
+      "confidence": 99.59,
+      "scores": {
+        "Late Blight": 99.59,
+        "Early Blight": 0.41,
+        "Healthy Leaf": 0.0
+      }
+    },
+    {
+      "filename": "059.jpg",
+      "folder": "Tomato___Early_blight",
+      "true_label": "Early Blight",
+      "predicted_label": "Late Blight",
+      "confidence": 98.35,
+      "scores": {
+        "Late Blight": 98.35,
+        "Early Blight": 1.65,
+        "Healthy Leaf": 0.0
+      }
+    },
+    {
+      "filename": "066.jpg",
+      "folder": "Tomato___Early_blight",
+      "true_label": "Early Blight",
+      "predicted_label": "Late Blight",
+      "confidence": 99.73,
+      "scores": {
+        "Late Blight": 99.73,
+        "Early Blight": 0.27,
+        "Healthy Leaf": 0.0
+      }
+    }
+  ]
+}

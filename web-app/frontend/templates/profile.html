@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Account Profile — Tomato Leaf Scan{% endblock %}
+
+{% block content %}
+<div class="page-header-wrap">
+  <div class="header-titles">
+    <p class="eyebrow accent">User Settings</p>
+    <h2>Account Profile</h2>
+    <p class="lede" style="margin-bottom:0;">
+      Manage your personal account credentials and security settings.
+    </p>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; margin-top: 20px;">
+  <!-- Profile Information Card -->
+  <div class="card" style="padding: 28px; border-radius: 20px; background: #ffffff;">
+    <h3 style="margin-top: 0; color: var(--ink); font-size: 1.25rem; display: flex; align-items: center; gap: 8px;">
+      <i class="fa-solid fa-address-card" style="color: var(--primary);"></i> Profile Details
+    </h3>
+    <p style="color: var(--muted); font-size: 0.9rem; margin-bottom: 20px;">
+      Update your contact information and display name.
+    </p>
+
+    {% if profile_message %}
+    <div style="background: #f0fdf4; border-left: 4px solid var(--primary); padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; color: #166534; font-size: 0.9rem;">
+      <i class="fa-solid fa-circle-check"></i> {{ profile_message }}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('profile_update') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+      <div class="form-group" style="margin-bottom: 16px;">
+        <label class="form-label" style="font-weight: 600; color: var(--ink);">Username</label>
+        <input type="text" class="form-control" value="{{ current_user.username }}" disabled style="width: 100%; padding: 10px 12px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; color: var(--muted);" />
+        <small style="color: var(--muted); font-size: 0.8rem;">Usernames cannot be changed.</small>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 16px;">
+        <label for="full_name" class="form-label" style="font-weight: 600; color: var(--ink);">Full Name</label>
+        <input type="text" id="full_name" name="full_name" class="form-control" value="{{ current_user.full_name }}" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px;" />
+      </div>
+
+      <div class="form-group" style="margin-bottom: 20px;">
+        <label for="email" class="form-label" style="font-weight: 600; color: var(--ink);">Email Address</label>
+        <input type="email" id="email" name="email" class="form-control" value="{{ current_user.email }}" required style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px;" />
+      </div>
+
+      <button type="submit" class="primary-btn" style="padding: 10px 20px;">
+        <i class="fa-solid fa-floppy-disk" style="margin-right: 6px;"></i> Save Changes
+      </button>
+    </form>
+  </div>
+
+  <!-- Change Password Card -->
+  <div class="card" style="padding: 28px; border-radius: 20px; background: #ffffff;">
+    <h3 style="margin-top: 0; color: var(--ink); font-size: 1.25rem; display: flex; align-items: center; gap: 8px;">
+      <i class="fa-solid fa-key" style="color: #d97706;"></i> Update Password
+    </h3>
+    <p style="color: var(--muted); font-size: 0.9rem; margin-bottom: 20px;">
+      Ensure your account is protected with a strong password.
+    </p>
+
+    {% if password_error %}
+    <div style="background: #fef2f2; border-left: 4px solid var(--danger); padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; color: #991b1b; font-size: 0.9rem;">
+      <i class="fa-solid fa-circle-exclamation"></i> {{ password_error }}
+    </div>
+    {% endif %}
+
+    {% if password_success %}
+    <div style="background: #f0fdf4; border-left: 4px solid var(--primary); padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; color: #166534; font-size: 0.9rem;">
+      <i class="fa-solid fa-circle-check"></i> {{ password_success }}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('profile_password') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+      <div class="form-group" style="margin-bottom: 16px;">
+        <label for="current_password" class="form-label" style="font-weight: 600; color: var(--ink);">Current Password</label>
+        <input type="password" id="current_password" name="current_password" class="form-control" required style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px;" />
+      </div>
+
+      <div class="form-group" style="margin-bottom: 16px;">
+        <label for="new_password" class="form-label" style="font-weight: 600; color: var(--ink);">New Password (min. 6 characters)</label>
+        <input type="password" id="new_password" name="new_password" class="form-control" minlength="6" required style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px;" />
+      </div>
+
+      <div class="form-group" style="margin-bottom: 20px;">
+        <label for="confirm_new_password" class="form-label" style="font-weight: 600; color: var(--ink);">Confirm New Password</label>
+        <input type="password" id="confirm_new_password" name="confirm_new_password" class="form-control" minlength="6" required style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px;" />
+      </div>
+
+      <button type="submit" class="secondary-btn" style="padding: 10px 20px;">
+        <i class="fa-solid fa-shield-halved" style="margin-right: 6px;"></i> Update Password
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

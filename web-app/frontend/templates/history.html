@@ -36,7 +36,9 @@
       <select id="status-filter" class="form-control">
         <option value="">All Diagnoses</option>
         <option value="healthy">Healthy Only</option>
-        <option value="disease">Disease Detections Only</option>
+        <option value="early_blight">Early Blight Only</option>
+        <option value="late_blight">Late Blight Only</option>
+        <option value="disease">All Diseases</option>
         <option value="unclear">Unclear / Low Confidence</option>
       </select>
     </div>
@@ -48,6 +50,18 @@
         <option value="">All Farms</option>
         <!-- Injected via JS -->
       </select>
+    </div>
+
+    <!-- Date From Filter -->
+    <div class="filter-group">
+      <label for="date-from-filter" class="filter-label">From Date</label>
+      <input type="date" id="date-from-filter" class="form-control" />
+    </div>
+
+    <!-- Date To Filter -->
+    <div class="filter-group">
+      <label for="date-to-filter" class="filter-label">To Date</label>
+      <input type="date" id="date-to-filter" class="form-control" />
     </div>
 
     <!-- Sort Order -->
@@ -64,9 +78,14 @@
     <div id="results-count-text" class="results-count-text">
       Loading scan records...
     </div>
-    <button type="button" id="reset-filters-btn" class="ghost-btn small-btn">
-      <i class="fa-solid fa-rotate-left"></i> Reset Filters
-    </button>
+    <div style="display: flex; gap: 8px;">
+      <button type="button" id="clear-history-btn" class="ghost-btn small-btn" style="color: var(--danger); border-color: rgba(220, 38, 38, 0.35);">
+        <i class="fa-solid fa-trash-can"></i> Clear History
+      </button>
+      <button type="button" id="reset-filters-btn" class="ghost-btn small-btn">
+        <i class="fa-solid fa-rotate-left"></i> Reset Filters
+      </button>
+    </div>
   </div>
 </section>
 
@@ -162,10 +181,15 @@
       </div>
     </div>
 
-    <div class="modal-actions" style="justify-content:space-between; margin-top:20px;">
-      <button type="button" class="danger-btn small-btn" id="detail-delete-btn">
-        <i class="fa-solid fa-trash-can" style="margin-right:6px;"></i> Delete Record
-      </button>
+    <div class="modal-actions" style="justify-content:space-between; margin-top:20px; flex-wrap:wrap; gap:10px;">
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <a id="detail-download-pdf-btn" href="#" target="_blank" class="primary-btn small-btn" style="text-decoration:none;">
+          <i class="fa-solid fa-file-pdf" style="margin-right:6px;"></i> Download PDF Report
+        </a>
+        <button type="button" class="danger-btn small-btn" id="detail-delete-btn">
+          <i class="fa-solid fa-trash-can" style="margin-right:6px;"></i> Delete Record
+        </button>
+      </div>
       <button type="button" class="ghost-btn" id="detail-done-btn">Done</button>
     </div>
   </div>
@@ -189,6 +213,30 @@
     <div class="modal-actions">
       <button type="button" class="ghost-btn" id="delete-scan-cancel">Cancel</button>
       <button type="button" class="danger-btn" id="delete-scan-confirm">Delete Record</button>
+    </div>
+  </div>
+</div>
+
+<!-- Clear All Scans Confirmation Modal -->
+<div id="clear-scans-modal" class="modal-backdrop hidden" aria-hidden="true">
+  <div class="modal-card card delete-confirm-card" role="dialog" aria-labelledby="clear-scans-title" style="max-width:460px;">
+    <div class="modal-header">
+      <h3 id="clear-scans-title" style="color:var(--danger);">
+        <i class="fa-solid fa-triangle-exclamation" style="margin-right:8px;"></i>Clear All Scan History
+      </h3>
+      <button type="button" class="modal-close-btn" id="clear-scans-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p>Are you sure you want to permanently clear all scan records from your history?</p>
+      <p class="modal-note" style="color:var(--muted); font-size:0.9rem; margin-top:8px;">
+        All diagnosis history will be cleared and the associated uploaded leaf photos will be removed from storage. This action cannot be reversed.
+      </p>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="ghost-btn" id="clear-scans-cancel">Cancel</button>
+      <button type="button" class="danger-btn" id="clear-scans-confirm">
+        <i class="fa-solid fa-trash-can" style="margin-right:6px;"></i> Yes, Clear All Scans
+      </button>
     </div>
   </div>
 </div>
@@ -229,11 +277,15 @@
     const status = document.getElementById('status-filter').value;
     const farmId = document.getElementById('farm-filter').value;
     const sort = document.getElementById('sort-filter').value;
+    const dateFrom = document.getElementById('date-from-filter').value;
+    const dateTo = document.getElementById('date-to-filter').value;
 
     const params = new URLSearchParams();
     if (search) params.append('search', search);
     if (status) params.append('status', status);
     if (farmId) params.append('farm_id', farmId);
+    if (dateFrom) params.append('date_from', dateFrom);
+    if (dateTo) params.append('date_to', dateTo);
     if (sort) params.append('sort', sort);
 
     try {
@@ -325,6 +377,9 @@
               <button type="button" class="primary-btn small-btn" onclick="openScanDetail(${scan.id})">
                 <i class="fa-solid fa-file-waveform"></i> View Details
               </button>
+              <a href="/api/scans/${scan.id}/report" target="_blank" class="ghost-btn icon-btn" title="Download PDF Report" style="text-decoration:none; padding:8px 10px;">
+                <i class="fa-solid fa-file-pdf" style="color:#dc2626;"></i>
+              </a>
               <button type="button" class="ghost-btn icon-btn danger-icon-btn" onclick="openDeleteScan(${scan.id})" aria-label="Delete scan">
                 <i class="fa-solid fa-trash-can"></i>
               </button>
@@ -359,6 +414,11 @@
     statusBadge.textContent = isHealthy ? 'Healthy Leaf' : (isUnclear ? 'Unclear Diagnosis' : 'Disease Detected');
 
     document.getElementById('detail-confidence-badge').textContent = `Confidence: ${Math.round(scan.confidence || 0)}%`;
+
+    const pdfBtn = document.getElementById('detail-download-pdf-btn');
+    if (pdfBtn) {
+      pdfBtn.href = `/api/scans/${scan.id}/report`;
+    }
 
     // Populate lists from raw_json
     const raw = scan.raw_json || {};
@@ -438,6 +498,39 @@
     }
   });
 
+  // Clear All Scans Modal Management
+  const clearModal = document.getElementById('clear-scans-modal');
+  const clearBtn = document.getElementById('clear-history-btn');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      clearModal.classList.remove('hidden');
+    });
+  }
+  document.getElementById('clear-scans-close')?.addEventListener('click', () => clearModal.classList.add('hidden'));
+  document.getElementById('clear-scans-cancel')?.addEventListener('click', () => clearModal.classList.add('hidden'));
+  document.getElementById('clear-scans-confirm')?.addEventListener('click', async () => {
+    const btn = document.getElementById('clear-scans-confirm');
+    btn.disabled = true;
+    btn.textContent = 'Clearing records...';
+    try {
+      const res = await fetch('/api/scans/clear', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to clear scan history');
+      clearModal.classList.add('hidden');
+      if (typeof showToast === 'function') {
+        showToast(data.message || 'Scan history cleared successfully', 'success');
+      }
+      await loadScans();
+    } catch (err) {
+      if (typeof showToast === 'function') {
+        showToast(err.message, 'error');
+      }
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-trash-can" style="margin-right:6px;"></i> Yes, Clear All Scans';
+    }
+  });
+
   // Filter & Search Events
   let searchTimeout = null;
   document.getElementById('search-input').addEventListener('input', () => {
@@ -446,12 +539,16 @@
   });
   document.getElementById('status-filter').addEventListener('change', loadScans);
   document.getElementById('farm-filter').addEventListener('change', loadScans);
+  document.getElementById('date-from-filter').addEventListener('change', loadScans);
+  document.getElementById('date-to-filter').addEventListener('change', loadScans);
   document.getElementById('sort-filter').addEventListener('change', loadScans);
 
   document.getElementById('reset-filters-btn').addEventListener('click', () => {
     document.getElementById('search-input').value = '';
     document.getElementById('status-filter').value = '';
     document.getElementById('farm-filter').value = '';
+    document.getElementById('date-from-filter').value = '';
+    document.getElementById('date-to-filter').value = '';
     document.getElementById('sort-filter').value = 'newest';
     loadScans();
   });

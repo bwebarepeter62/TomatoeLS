@@ -1,160 +1,134 @@
-# Tomato Leaf Scan — AI Crop Health Platform
+# LeafScan — AI Tomato Leaf Disease Detection and Farm Monitoring System
 
-> **An AI-Based Image Processing System for Early Tomato Leaf Disease Detection and Agronomic Farm Management**
-
----
-
-## 🌟 Executive Summary
-
-**Tomato Leaf Scan** is an intelligent agricultural technology platform engineered to help tomato farmers, agronomists, and agricultural extension officers detect crop pathologies early, prevent pathogen spread, and manage farm plot health.
-
-The system combines:
-1. **On-Device Computer Vision (AI/ML):** An INT8-quantized **Ultralytics YOLOv8** model running locally on commodity CPU hardware via **TensorFlow Lite**, capable of detecting and classifying 15 tomato foliar conditions and healthy foliage.
-2. **Interactive Web Application:** A responsive **Python Flask** web platform with multi-farm plot management, live crop monitoring dashboards (Chart.js), and searchable diagnostic scan history.
-3. **Cross-Platform Mobile Application:** A self-contained **Flutter** mobile client for offline smartphone edge detection.
-4. **Relational Data Storage:** An embedded **SQLite** database storing farm registries and inspection audit logs with automated safe image cleanup.
-5. **Academic & Technical Documentation:** Comprehensive university Capstone dissertation draft, technical architecture manual, and completion checklist.
+> **An AI-Powered Agricultural Technology Platform for Tomato Folium Pathology Detection, Crop Monitoring, and Multi-Plot Farm Management**
 
 ---
 
-## 📁 Organized Project Structure
+## 🌟 Overview & Objectives
 
-The project is structured into clean, modular, self-contained components:
+**LeafScan** is a full-stack smart agriculture platform engineered for tomato growers, agronomists, and extension officers. The system provides rapid foliar disease detection, preventative treatment advice, multi-farm plot monitoring, downloadable diagnostic reports, and offline field synchronization.
 
-```text
-Leafscan-main/
-│
-├── README.md                          # Master project documentation (this file)
-├── .gitignore                         # Git tracking exclusions
-├── start_app.bat                      # Master one-click Windows launcher
-│
-├── web-app/                           # Full-Stack Web Application
-│   ├── README.md                      # Web app architecture & API reference
-│   ├── requirements.txt               # Pinned Python packages (Flask, Pillow, numpy, tf-cpu)
-│   ├── .env.example                   # Environment configuration template
-│   ├── start_app.bat                  # Web application launcher
-│   │
-│   ├── frontend/                      # Presentation Layer
-│   │   ├── templates/                 # Jinja2 HTML5 views (home, scan, farms, monitoring, history)
-│   │   └── static/                    # Static assets
-│   │       ├── css/styles.css         # Unified CSS design system & responsive styling
-│   │       ├── js/app.js              # Leaf scanner client logic & farm selector
-│   │       ├── images/hero-tomato.jpg # High-resolution landing visual
-│   │       └── uploads/               # Persistent uploaded inspection photos
-│   │
-│   ├── backend/                       # Application Controller Layer
-│   │   ├── app.py                     # Flask server, route controllers, and TFLite inference
-│   │   └── db.py                      # SQLite database access layer, CRUD helpers, stats
-│   │
-│   ├── database/                      # Data Persistence Layer
-│   │   ├── README.md                  # Database documentation & ER schema
-│   │   ├── leafscan.db                # SQLite database file
-│   │   └── schema.sql                 # SQL schema definition & indexes
-│   │
-│   └── tests/                         # Web Test Suite
-│       └── test_app.py                # Automated 54-point integration test suite
-│
-├── mobile-app/                        # Cross-Platform Mobile Client (Flutter)
-│   ├── README.md                      # Mobile app documentation & build guide
-│   ├── pubspec.yaml                   # Flutter dependencies & asset manifest
-│   ├── lib/                           # Dart application code (main.dart, models, services)
-│   ├── assets/                        # Mobile assets (best_int8.tflite, fonts, icons)
-│   ├── test/                          # Mobile unit tests (leafscan_test.dart)
-│   └── android/ · ios/ · windows/ …  # Native platform host projects
-│
-├── ai-model/                          # Machine Learning & Model Assets
-│   ├── README.md                      # Model specifications, tensor formats, and class taxonomy
-│   └── models/
-│       └── best_int8.tflite           # INT8-quantized YOLOv8 model (~26.5 MB)
-│
-├── docs/                              # Academic & Technical Documentation
-│   ├── README.md                      # Documentation index
-│   ├── TECHNICAL_DOCUMENTATION.md     # 13-Chapter Software & Architecture Manual
-│   ├── PROJECT_REPORT_DRAFT.md        # 5-Chapter University Final-Year Dissertation
-│   ├── REPORT_COMPLETION_CHECKLIST.md # Actionable submission checklist
-│   └── DOCUMENTATION.md               # Original Flutter technical reference
-│
-└── scripts/                           # Safe Maintenance & Test Scripts
-    ├── verify_system.py               # Comprehensive system health check
-    └── run_tests.bat                  # One-click test runner batch script
-```
+### Primary Capabilities:
+1. **AI Folium Diagnostics:** Web-based and mobile image analysis identifying high-impact tomato pathologies (*Early Blight* and *Late Blight*) alongside healthy leaves.
+2. **Multi-Farm Plot Management:** Organize fields, track tomato varieties (Roma, MoneyMaker, San Marzano, etc.), planting cycles, and plant densities.
+3. **Crop Monitoring Analytics:** Real-time dashboards visualizing crop health distribution, pathogen trends over time, farm-specific disease incidence, and actionable agronomic alerts.
+4. **Professional PDF Diagnostic Reports:** Downloadable, printable inspection reports with leaf photos, color-coded diagnostic badges, treatment regimes, and advisory disclaimers.
+5. **Secure Multi-User System:** Session-based authentication with Scrypt password hashing, CSRF tokens, and user-isolated farm and scan records.
+6. **Mobile Field Synchronization:** Cross-platform Flutter mobile client support with batch synchronization and deduplication.
 
 ---
 
-## 🚀 Quick Start Guide (Windows)
+## 🔒 AI Model Architecture & Dual-Platform Contracts
 
-### 1. Launch the Web Application (One-Click)
+> [!IMPORTANT]
+> The existing AI models were **strictly preserved** in this upgrade cycle. No model files, weights, training pipelines, or prediction logic were modified.
+
+| Attribute | Web Application Platform | Mobile Field Client |
+| :--- | :--- | :--- |
+| **Model File** | `web-app/backend/tomato_disease_model.h5` | `mobile-app/assets/models/best_int8.tflite` |
+| **Architecture** | MobileNetV2 (Keras / TensorFlow CPU) | Quantized INT8 YOLOv8 Edge Detector |
+| **Input Shape** | $(1, 224, 224, 3)$ RGB | Quantized mobile input tensor |
+| **Diagnoses** | **3 Classes:** Early Blight, Late Blight, Healthy Leaf | **15 Classes:** Multi-condition edge detector |
+| **Confidence Policy** | Predictions $< 50\%$ flagged as *"No clear disease found"* | On-device confidence thresholding |
+| **Execution** | Centralized server-side inference | Fully offline on-device smartphone inference |
+
+---
+
+## 🚀 Quick Start Guide (Local Execution)
+
+### Prerequisites:
+- Python 3.11.x installed (e.g., Python 3.11.9)
+- Git (optional)
+
+### 1. Launch Using the Batch Script (Windows)
 Double-click `start_app.bat` in the project root:
 ```cmd
 start_app.bat
 ```
-This automatically verifies Python 3.11, validates dependencies, opens your browser to `http://127.0.0.1:5000`, and starts the Flask server.
 
-### 2. Manual Terminal Launch
+### 2. Manual Terminal Launch (PowerShell / Command Prompt)
 ```powershell
-# Open terminal in web-app folder
-cd "d:\TO\tomato\Leafscan-main\web-app"
+# Navigate to project root
+cd d:\projects\blight\Leafscan-main
 
 # Install dependencies
 pip install -r requirements.txt
 
 # Start Flask server
-python backend\app.py
+python app.py
 ```
-Then navigate to: **`http://127.0.0.1:5000`**
+Open your web browser and navigate to: **`http://127.0.0.1:5000`**
 
 ---
 
-## 🧪 System Verification & Automated Testing
+## 🧪 Automated Testing & Verification
 
-### 1. System Health Check
-Run the automated verification script:
-```powershell
-python scripts\verify_system.py
-```
-*Verifies Python runtime, required packages, AI model loading, database tables, and template availability.*
+The system includes comprehensive automated test suites covering all non-model features, user authentication, PDF generation, mobile sync, and model integrity:
 
-### 2. Run the Full Test Suite
-Run the 54-point automated test suite:
 ```powershell
+# 1. Run Production Full-Stack Test Suite (72 tests)
 python web-app\tests\test_app.py
+
+# 2. Run Model Prediction Pipeline Test Suite (14 tests)
+python -m unittest discover -s web-app/tests -p "test_prediction.py" -v
 ```
-*Or double-click `scripts\run_tests.bat`.*
 
-**All 54/54 tests run synchronously and validate:**
-- Route HTTP 200 responses and template rendering (`/`, `/scan`, `/farms`, `/monitoring`, `/history`).
-- Full Farm plot CRUD lifecycle (Create, List, Read, Update, Delete).
-- Leaf photo upload, image normalization, model inference, and scan history recording.
-- Physical file persistence in `static/uploads/` and safe file unlinking upon deletion.
-- Crop Monitoring Dashboard KPI metrics, Chart.js structures, and empty states.
+**Overall Test Results:** **86/86 TESTS PASSED (100% SUCCESS RATE)**.  
+See [TEST_RESULTS.md](file:///d:/projects/blight/Leafscan-main/TEST_RESULTS.md) for the detailed test execution log.
 
 ---
 
-## 🌿 Detectable Foliar Conditions (15 Classes)
+## ☁️ Production Deployment on Render
 
-The integrated AI model detects and provides tailored agronomic guidance for:
-1. **Healthy Leaf** — Symptom-free foliage
-2. **Early Blight** (*Alternaria solani*) — Concentric fungal rings with chlorotic halos
-3. **Late Blight** (*Phytophthora infestans*) — Rapid water-soaked leaf blotches
-4. **Bacterial Spot** (*Xanthomonas* spp.) — Small dark lesions with yellow margins
-5. **Bacterial Canker** (*Clavibacter michiganensis*) — Vascular wilting and upward curling
-6. **Tomato Yellow Leaf Curl Virus (TYLCV)** — Upward cupping, chlorosis, and stunting
-7. **Tomato Mosaic Virus (ToMV)** — Mottled leaf blister patterns
-8. **Septoria Leaf Spot** — Circular spots with dark borders and tan centers
-9. **Leaf Mold** (*Passalora fulva*) — Pale upper patches with olive-green velvet mold
-10. **Powdery Mildew** — White talcum-like coating on upper leaf surfaces
-11. **Pests:** Aphids, Flea Beetles, Leafminers (*Liriomyza*), Leafhoppers and Jassids
+LeafScan is pre-configured for deployment as a **Render Web Service**:
+- **Procfile:**
+  ```text
+  web: gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 2 --timeout 120 wsgi:app
+  ```
+- **Persistent Disk Storage:** Set `LEAFSCAN_DATA_DIR=/var/data` to persist the SQLite database (`leafscan.db`) and uploaded leaf photographs across restarts.
+- **Docker Support:** Ready with root `Dockerfile` using dynamic `$PORT` and `python:3.11-slim`.
+
+See [DEPLOYMENT_GUIDE.md](file:///d:/projects/blight/Leafscan-main/DEPLOYMENT_GUIDE.md) for step-by-step Render setup instructions.
 
 ---
 
-## 📚 Academic & Technical Documentation
+## 📁 Repository Directory Structure
 
-The `docs/` folder contains complete materials for university capstone submission:
-- **[TECHNICAL_DOCUMENTATION.md](file:///d:/TO/tomato/Leafscan-main/docs/TECHNICAL_DOCUMENTATION.md):** 13-chapter engineering manual with Mermaid diagrams, API references, security measures, and testing matrices.
-- **[PROJECT_REPORT_DRAFT.md](file:///d:/TO/tomato/Leafscan-main/docs/PROJECT_REPORT_DRAFT.md):** 5-chapter academic dissertation formatted with preliminary pages, 100% verified genuine APA 7th edition references, and screenshot placeholders.
-- **[REPORT_COMPLETION_CHECKLIST.md](file:///d:/TO/tomato/Leafscan-main/docs/REPORT_COMPLETION_CHECKLIST.md):** Pre-submission checklist for student details, screenshots, and supervisor reviews.
+```text
+Leafscan-main/
+│
+├── app.py                             # Root web entry point (delegates to backend)
+├── wsgi.py                            # Production WSGI entry point (Gunicorn)
+├── Procfile                           # Render process declaration
+├── Dockerfile                         # Container build definition
+├── runtime.txt                        # Pinned Python version (python-3.11.9)
+├── requirements.txt                   # Production Python package manifest
+│
+├── web-app/                           # Full-Stack Web Application
+│   ├── backend/                       # Application Controller & Data Logic
+│   │   ├── app.py                     # Flask controllers, auth, PDF & mobile API
+│   │   ├── db.py                      # SQLite database operations & WAL schema
+│   │   ├── pdf_report.py              # ReportLab PDF report generator
+│   │   └── tomato_disease_model.h5    # Untouched 3-class MobileNetV2 model
+│   │
+│   ├── frontend/                      # Presentation Layer
+│   │   ├── templates/                 # Jinja2 views (scan, farms, monitoring, etc.)
+│   │   └── static/                    # CSS design system, JS, and uploads
+│   │
+│   └── tests/                         # Automated Test Suites
+│       ├── test_app.py                # 72-point comprehensive feature test suite
+│       └── test_prediction.py         # 14-point model contract & inference test suite
+│
+├── mobile-app/                        # Cross-Platform Flutter Mobile Application
+│   └── assets/models/best_int8.tflite # Untouched 15-class INT8 quantized TFLite model
+│
+├── PROJECT_CHANGES.md                 # Detailed changelog for all tasks (Tasks 1–13)
+├── DOCUMENTATION.md                   # Complete architectural & API documentation
+├── DEPLOYMENT_GUIDE.md                # Render production deployment guide
+└── TEST_RESULTS.md                    # Verification test run logs
+```
 
 ---
 
-## ⚖️ Advisory Notice
-Diagnoses generated by Tomato Leaf Scan are calculated via automated machine learning inference and serve as an informational decision-support aid. For critical chemical interventions, farmers should cross-verify symptoms with local agricultural extension officers or certified plant pathologists.
+## ⚖️ Agricultural Advisory Notice
+> "LeafScan diagnoses are generated by an AI-assisted computer vision system and serve strictly as advisory decision-support information. Results should not replace professional agronomic diagnosis. If symptoms persist or severe infestation is suspected, consult a certified plant pathologist or agricultural extension officer."

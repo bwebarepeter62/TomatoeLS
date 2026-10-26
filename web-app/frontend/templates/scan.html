@@ -28,12 +28,33 @@
       <small class="form-help">Assigning to a farm helps you filter trends in Crop Monitoring and Scan History.</small>
     </div>
 
+    <!-- IMPORTANT SCANNING NOTICE -->
+    <div class="card scanning-notice-card" style="background:#fffbeb; border:1px solid #fde68a; border-left:4px solid #d97706; padding:16px 18px; margin-bottom:20px; border-radius:12px;">
+      <div style="display:flex; gap:12px; align-items:flex-start;">
+        <i class="fa-solid fa-triangle-exclamation" style="color:#d97706; font-size:1.3rem; margin-top:2px;"></i>
+        <div>
+          <strong style="color:#92400e; font-size:0.92rem; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:6px;">
+            IMPORTANT SCANNING NOTICE
+          </strong>
+          <p style="color:#78350f; font-size:0.9rem; line-height:1.5; margin:0 0 6px;">
+            LeafScan is currently designed to identify Early Blight and Late Blight in tomato leaves. For the best results, upload clear photographs of tomato leaves showing suspected blight symptoms.
+          </p>
+          <p style="color:#78350f; font-size:0.9rem; line-height:1.5; margin:0 0 6px;">
+            Avoid uploading unrelated plants, fruits, objects, or unclear photographs.
+          </p>
+          <p style="color:#92400e; font-size:0.85rem; line-height:1.4; margin:0; font-style:italic;">
+            AI predictions are advisory and may be incorrect. If you are unsure about the diagnosis, consult a qualified agricultural expert.
+          </p>
+        </div>
+      </div>
+    </div>
+
     <div class="upload-box" id="upload-box">
       <input id="image-input" type="file" accept="image/png, image/jpeg, image/webp" />
       <label for="image-input" class="upload-label">
         <span class="upload-emoji"><i class="fa-regular fa-images"></i></span>
         <strong>Choose a tomato leaf image</strong>
-        <small>PNG, JPG, or WEBP (Max 15MB)</small>
+        <small>PNG, JPG, or WEBP (Max 16MB)</small>
       </label>
     </div>
 
@@ -44,10 +65,14 @@
       </button>
     </div>
 
-    <div class="form-actions">
+    <div class="form-actions" style="display:flex; flex-direction:column; align-items:center; gap:8px;">
       <button type="submit" id="analyze-btn" class="primary-btn large-btn">
         <i class="fa-solid fa-magnifying-glass" style="margin-right:8px;"></i> Scan leaf
       </button>
+      <small style="color:var(--muted); font-size:0.85rem;">
+        <i class="fa-solid fa-circle-info" style="color:var(--primary); margin-right:4px;"></i>
+        Upload tomato leaf images with suspected blight symptoms only.
+      </small>
     </div>
   </form>
 
@@ -63,6 +88,9 @@
       <h3 id="result-title">Scan complete</h3>
     </div>
     <div class="results-header-actions" style="display:flex; gap:10px; flex-wrap:wrap;">
+      <a href="#" id="download-report-btn" class="primary-btn small-btn" target="_blank" style="display:none; text-decoration:none;">
+        <i class="fa-solid fa-file-pdf" style="margin-right:6px;"></i> Download PDF Report
+      </a>
       <a href="{{ url_for('history_page') }}" class="ghost-btn" id="view-in-history-btn">
         <i class="fa-solid fa-clock-rotate-left" style="margin-right:6px;"></i> View in Scan History
       </a>

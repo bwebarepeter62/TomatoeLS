@@ -18,6 +18,8 @@ env/
 ENV/
 env.bak/
 venv.bak/
+*.bak
+*.bak_*
 
 # Environment Configurations & Secrets
 .env

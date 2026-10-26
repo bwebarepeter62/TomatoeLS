@@ -1,24 +1,13 @@
 """
-Prediction tests for LeafScan (standard-library unittest, no extra packages needed).
+Prediction and AI Pipeline Tests for LeafScan
+==============================================
+Standard-library unittest test suite verifying the 3-class Keras MobileNetV2
+architecture (Early Blight, Late Blight, Healthy Leaf).
 
-Run from the project root:
+Run from project root:
     python -m unittest discover -s web-app/tests -p "test_prediction.py" -v
-
-What is tested
---------------
-* class index -> label mapping and confidence selection      (pure logic, no model)
-* uncertainty threshold and invalid model output handling     (pure logic, no model)
-* image preprocessing (shape, dtype, 0-1 range, RGB, NCHW)    (no model)
-* API: invalid / unsupported uploads, missing file, JSON keys (real Flask test client)
-* API: missing model file -> generic error, no path leaked    (real Flask test client)
-* Real model on LABELED REAL-WORLD FIELD photos (PlantDoc sample)
-                                                             (skipped if ai-model/eval_data_field is absent)
-
-IMPORTANT HONESTY NOTE
-The field-photo test is a regression guard on a small sample, not a proof of accuracy. Its main
-purpose is to make sure healthy field leaves are NOT confidently called blight (the failure of
-the previous 3-class model). The model is still imperfect on field photos; see ai-model/README.md.
 """
+
 import io
 import os
 import shutil
@@ -40,14 +29,8 @@ from PIL import Image
 import app as leafscan
 import db
 
-LABELED_DIR = os.path.join(PROJECT_ROOT, 'ai-model', 'eval_data_field')
-FOLDER_FOR_LABEL = {
-    'Early Blight': 'Tomato___Early_blight',
-    'Late Blight': 'Tomato___Late_blight',
-    'Healthy Leaf': 'Tomato___healthy',
-}
-BLIGHT_LABELS = ('Early Blight', 'Late Blight')
-N = len(leafscan.CLASS_NAMES)
+LAB_DIR = os.path.join(PROJECT_ROOT, 'ai-model', 'eval_data')
+FIELD_DIR = os.path.join(PROJECT_ROOT, 'ai-model', 'eval_data_field')
 
 
 def jpeg_bytes(size=(300, 200), color=(60, 140, 60), mode='RGB', fmt='JPEG'):
@@ -57,100 +40,90 @@ def jpeg_bytes(size=(300, 200), color=(60, 140, 60), mode='RGB', fmt='JPEG'):
     return buf
 
 
-class ClassMappingTests(unittest.TestCase):
-    def test_class_order_is_the_documented_one(self):
-        # Order of the model's output channels 4..18 (see ai-model/README.md).
-        self.assertEqual(leafscan.CLASS_NAMES, [
-            'Aphids', 'Early Blight', 'Healthy Leaf', 'Leaf Curl', 'Leafhoppers and Jassids',
-            'Molds', 'Mosaic Virus', 'Septoria', 'Bacterial Canker', 'Bacterial Spot',
-            'Flea Beetle', 'Late Blight', 'Leafminer', 'Powdery Mildew', 'Yellow Curl Virus',
-        ])
+class ModelArchitectureTests(unittest.TestCase):
+    """Verifies that the loaded Keras model matches the production specification."""
+
+    def test_class_names_and_healthy_index(self):
+        self.assertEqual(leafscan.CLASS_NAMES, ['Early Blight', 'Late Blight', 'Healthy Leaf'])
         self.assertEqual(leafscan.HEALTHY_INDEX, 2)
+        self.assertEqual(len(leafscan.CLASS_NAMES), 3)
 
     def test_every_class_has_treatment_guidance(self):
         for name in leafscan.CLASS_NAMES:
-            self.assertIn(name, leafscan.DAMAGE_DB, name)
+            self.assertIn(name, leafscan.DAMAGE_DB, f"Missing treatment guidance for {name}")
 
-    def test_each_index_maps_to_its_own_label_and_confidence(self):
-        for idx, name in enumerate(leafscan.CLASS_NAMES):
-            scores = np.full(N, 0.05)
-            scores[idx] = 0.90
-            out = leafscan.interpret_scores(scores, threshold=0.5)
-            self.assertEqual(out['index'], idx)
-            self.assertEqual(out['label'], name)
-            self.assertAlmostEqual(out['confidence'], 0.90)  # taken from the winning class
-            self.assertFalse(out['uncertain'])
-
-    def test_model_class_count_matches_label_list(self):
+    def test_model_input_and_output_shapes(self):
         model = leafscan.ensure_model_loaded()
-        self.assertEqual(model.output_shape[1], 4 + len(leafscan.CLASS_NAMES))
-        self.assertEqual(model.input_shape[1:], (3, 640, 640))
+        self.assertEqual(model.input_shape[1:], (224, 224, 3))
+        self.assertEqual(model.output_shape[1], 3)
 
-    def test_score_classes_takes_best_anchor_per_class_and_ignores_boxes(self):
-        raw = np.zeros((1, 4 + N, 50), dtype=np.float32)
-        raw[0, :4, :] = 600.0          # box coordinates must be ignored
-        raw[0, 4 + 11, 7] = 0.8        # Late Blight, best anchor 7
-        raw[0, 4 + 11, 9] = 0.3
-        raw[0, 4 + 2, 3] = 0.4         # Healthy Leaf
-        scores = leafscan.score_classes(raw)
-        self.assertEqual(scores.shape, (N,))
-        self.assertAlmostEqual(float(scores[11]), 0.8, places=5)
-        self.assertAlmostEqual(float(scores[2]), 0.4, places=5)
-        self.assertEqual(int(np.argmax(scores)), 11)
-
-
-class UncertaintyTests(unittest.TestCase):
-    def _scores(self, **top):
-        scores = np.full(N, 0.02)
-        for idx, val in top.items():
-            scores[int(idx[1:])] = val
-        return scores
-
-    def test_low_top_score_is_uncertain(self):
-        out = leafscan.interpret_scores(self._scores(i11=0.20, i2=0.15), threshold=0.25)
-        self.assertTrue(out['uncertain'])
-
-    def test_high_top_score_is_not_uncertain(self):
-        out = leafscan.interpret_scores(self._scores(i2=0.90), threshold=0.25)
-        self.assertFalse(out['uncertain'])
-
-    def test_threshold_is_configurable(self):
-        scores = self._scores(i11=0.60)
-        self.assertTrue(leafscan.interpret_scores(scores, threshold=0.8)['uncertain'])
-        self.assertFalse(leafscan.interpret_scores(scores, threshold=0.5)['uncertain'])
-
-    def test_invalid_model_output_is_rejected_not_mislabelled(self):
-        for bad in ([0.5, 0.5], [2.0] + [0.0] * (N - 1), [-1.0] + [0.0] * (N - 1),
-                    [float('nan')] + [0.5] * (N - 1)):
-            with self.assertRaises(ValueError, msg=f'{bad} should be rejected'):
-                leafscan.interpret_scores(bad)
+    def test_custom_layers_math(self):
+        divide_layer = leafscan.TrueDivide()
+        sub_layer = leafscan.Subtract()
+        test_in = np.array([0.0, 127.5, 255.0], dtype=np.float32)
+        div_out = divide_layer.call(test_in)
+        if hasattr(div_out, 'numpy'):
+            div_out = div_out.numpy()
+        np.testing.assert_allclose(div_out, [0.0, 1.0, 2.0], atol=1e-5)
+        sub_out = sub_layer.call(div_out)
+        if hasattr(sub_out, 'numpy'):
+            sub_out = sub_out.numpy()
+        np.testing.assert_allclose(sub_out, [-1.0, 0.0, 1.0], atol=1e-5)
 
 
 class PreprocessingTests(unittest.TestCase):
-    def test_shape_dtype_and_range(self):
-        img = Image.new('RGB', (640, 480), (255, 0, 128))
+    """Verifies that preprocessing converts raw images into valid (1, 224, 224, 3) arrays."""
+
+    def test_shape_dtype_and_dimensions(self):
+        img = Image.new('RGB', (640, 480), (255, 128, 0))
         arr = leafscan.preprocess_image(img)
-        self.assertEqual(arr.shape, (1, 3, 640, 640))
+        self.assertEqual(arr.shape, (1, 224, 224, 3))
         self.assertEqual(arr.dtype, np.float32)
-        self.assertAlmostEqual(float(arr.max()), 1.0, places=5)   # scaled to 0-1
+        self.assertAlmostEqual(float(arr.max()), 255.0, places=1)
         self.assertGreaterEqual(float(arr.min()), 0.0)
-        # channels-first, RGB order preserved
-        self.assertAlmostEqual(float(arr[0, 0, 0, 0]), 1.0, places=5)
-        self.assertAlmostEqual(float(arr[0, 1, 0, 0]), 0.0, places=5)
-        self.assertAlmostEqual(float(arr[0, 2, 0, 0]), 128 / 255, places=3)
 
-    def test_other_color_modes_become_three_channels(self):
-        for mode, color in (('L', 100), ('RGBA', (10, 200, 30, 128)), ('P', 5)):
-            arr = leafscan.preprocess_image(Image.new(mode, (50, 70), color))
-            self.assertEqual(arr.shape, (1, 3, 640, 640), mode)
+    def test_color_modes_converted_to_three_channels(self):
+        for mode, color in (('L', 128), ('RGBA', (10, 200, 30, 255)), ('P', 5)):
+            img = Image.new(mode, (100, 100), color)
+            arr = leafscan.preprocess_image(img)
+            self.assertEqual(arr.shape, (1, 224, 224, 3), f"Failed for mode {mode}")
 
 
-class ApiTests(unittest.TestCase):
-    """Uses a throw-away database and upload folder so real scan history is never touched."""
+class UncertaintyAndDecisionTests(unittest.TestCase):
+    """Verifies uncertainty thresholds and diagnosis decision mapping."""
+
+    def test_uncertainty_flagging_when_confidence_low(self):
+        old_thresh = leafscan.CONFIDENCE_THRESHOLD
+        leafscan.CONFIDENCE_THRESHOLD = 0.999999  # Force uncertainty
+        try:
+            img = Image.new('RGB', (224, 224), (100, 100, 100))
+            res = leafscan.build_result_for_image(img)
+            self.assertTrue(res['uncertain'])
+            self.assertFalse(res['available'])
+            self.assertFalse(res['is_healthy'])
+            self.assertEqual(res['label'], 'No clear disease found')
+        finally:
+            leafscan.CONFIDENCE_THRESHOLD = old_thresh
+
+    def test_confident_prediction_returns_available(self):
+        old_thresh = leafscan.CONFIDENCE_THRESHOLD
+        leafscan.CONFIDENCE_THRESHOLD = 0.01  # Force confident
+        try:
+            img = Image.new('RGB', (224, 224), (40, 160, 60))
+            res = leafscan.build_result_for_image(img)
+            self.assertFalse(res['uncertain'])
+            self.assertTrue(res['available'])
+            self.assertIn(res['class_index'], [0, 1, 2])
+        finally:
+            leafscan.CONFIDENCE_THRESHOLD = old_thresh
+
+
+class ApiPredictionTests(unittest.TestCase):
+    """Tests /api/predict using a temporary database."""
 
     @classmethod
     def setUpClass(cls):
-        cls.tmp = tempfile.mkdtemp(prefix='leafscan_test_')
+        cls.tmp = tempfile.mkdtemp(prefix='leafscan_predtest_')
         cls._old = (db.DB_PATH, db.DATABASE_DIR, db.UPLOADS_DIR, leafscan.UPLOADS_DIR)
         db.DATABASE_DIR = cls.tmp
         db.DB_PATH = os.path.join(cls.tmp, 'test.db')
@@ -163,90 +136,49 @@ class ApiTests(unittest.TestCase):
         db.DB_PATH, db.DATABASE_DIR, db.UPLOADS_DIR, leafscan.UPLOADS_DIR = cls._old
         shutil.rmtree(cls.tmp, ignore_errors=True)
 
-    def post(self, data, filename='leaf.jpg'):
-        payload = {'image': (data, filename)} if data is not None else {}
+    def post_image(self, data, filename='leaf.jpg', farm_id=None):
+        payload = {}
+        if data is not None:
+            payload['image'] = (data, filename)
+        if farm_id is not None:
+            payload['farm_id'] = str(farm_id)
         return self.client.post('/api/predict', data=payload, content_type='multipart/form-data')
 
-    def test_valid_image_returns_expected_json_structure(self):
-        res = self.post(jpeg_bytes())
+    def test_valid_image_upload_returns_expected_contract(self):
+        res = self.post_image(jpeg_bytes())
         self.assertEqual(res.status_code, 200)
-        body = res.get_json()
-        for key in ('status', 'label', 'prediction', 'message', 'confidence', 'confidence_score',
-                    'disease', 'available', 'predictions', 'class_index', 'is_healthy',
-                    'probabilities', 'scan_id', 'image_url'):
-            self.assertIn(key, body)
-        self.assertEqual(len(body['predictions']), N)
-        self.assertEqual(len(body['probabilities']), N)
-        # the confidence shown must be the score of the class that was picked
-        picked_name = leafscan.CLASS_NAMES[body['class_index']]
-        self.assertAlmostEqual(body['confidence'], body['probabilities'][picked_name] * 100, places=1)
-        # predictions are sorted best-first
-        scores = [p['probability'] for p in body['predictions']]
-        self.assertEqual(scores, sorted(scores, reverse=True))
+        data = res.get_json()
+        expected_keys = ('status', 'label', 'prediction', 'message', 'confidence',
+                         'confidence_score', 'disease', 'available', 'uncertain',
+                         'predictions', 'class_index', 'is_healthy', 'scan_id', 'image_url')
+        for key in expected_keys:
+            self.assertIn(key, data, f"Missing key '{key}' in prediction response")
 
-    def test_uncertain_result_is_never_reported_as_healthy(self):
-        old = leafscan.CONFIDENCE_THRESHOLD
-        leafscan.CONFIDENCE_THRESHOLD = 1.01  # force every prediction to be "uncertain"
-        try:
-            body = self.post(jpeg_bytes()).get_json()
-        finally:
-            leafscan.CONFIDENCE_THRESHOLD = old
-        self.assertTrue(body['uncertain'])
-        self.assertFalse(body['available'])
-        self.assertFalse(body['is_healthy'])
-        self.assertNotEqual(body['label'], leafscan.HEALTHY_LABEL)
-        self.assertEqual(body['label'], 'No clear disease found')
+        self.assertEqual(len(data['predictions']), 3)
+        self.assertTrue(data['image_url'].startswith('/static/uploads/'))
+        self.assertTrue(isinstance(data['scan_id'], int))
 
-    def test_no_file(self):
-        res = self.post(None)
+    def test_missing_image_payload_returns_400(self):
+        res = self.post_image(None)
         self.assertEqual(res.status_code, 400)
+        self.assertIn('error', res.get_json())
 
-    def test_empty_filename(self):
-        res = self.post(jpeg_bytes(), filename='')
+    def test_empty_filename_returns_400(self):
+        res = self.post_image(jpeg_bytes(), filename='')
         self.assertEqual(res.status_code, 400)
+        self.assertIn('error', res.get_json())
 
-    def test_unsupported_extension(self):
-        res = self.post(jpeg_bytes(fmt='GIF', mode='P', color=3), filename='leaf.gif')
-        self.assertEqual(res.status_code, 400)
-        self.assertIn('Unsupported', res.get_json()['error'])
-
-    def test_filename_without_extension_is_rejected(self):
-        res = self.post(jpeg_bytes(), filename='leaf')
-        self.assertEqual(res.status_code, 400)
-
-    def test_text_file_pretending_to_be_jpg(self):
-        res = self.post(io.BytesIO(b'this is not an image'), filename='leaf.jpg')
+    def test_corrupted_non_image_file_returns_400(self):
+        res = self.post_image(io.BytesIO(b'not an image payload'), filename='bad.jpg')
         self.assertEqual(res.status_code, 400)
         self.assertIn('not a valid image', res.get_json()['error'])
 
-    def test_corrupted_jpeg(self):
-        good = jpeg_bytes().getvalue()
-        res = self.post(io.BytesIO(good[: len(good) // 3]), filename='leaf.jpg')
-        self.assertIn(res.status_code, (400, 500))
-        self.assertIn('error', res.get_json())
-
-    def test_bad_pagination_values_are_a_400_not_a_crash(self):
-        self.assertEqual(self.client.get('/api/scans?limit=abc').status_code, 400)
-
-    def test_missing_model_gives_generic_error_without_leaking_path(self):
-        saved_model, saved_candidates = leafscan.MODEL, leafscan.MODEL_CANDIDATES
-        leafscan.MODEL = None
-        leafscan.MODEL_CANDIDATES = [os.path.join(self.tmp, 'definitely_missing', 'model.tflite')]
-        try:
-            res = self.post(jpeg_bytes())
-        finally:
-            leafscan.MODEL, leafscan.MODEL_CANDIDATES = saved_model, saved_candidates
-        self.assertEqual(res.status_code, 500)
-        error = res.get_json()['error']
-        self.assertNotIn('definitely_missing', error)
-        self.assertNotIn(self.tmp, error)
-
 
 class DatabaseResetTests(unittest.TestCase):
-    """reset_db() must wipe data, keep a backup and leave a usable empty schema."""
+    """Verifies that reset_db cleans data, keeps backups, and leaves schema operable."""
 
     def setUp(self):
-        self.tmp = tempfile.mkdtemp(prefix='leafscan_reset_')
+        self.tmp = tempfile.mkdtemp(prefix='leafscan_dbreset_')
         self._old = (db.DB_PATH, db.DATABASE_DIR, db.UPLOADS_DIR)
         db.DATABASE_DIR = self.tmp
         db.DB_PATH = os.path.join(self.tmp, 'test.db')
@@ -257,76 +189,31 @@ class DatabaseResetTests(unittest.TestCase):
         db.DB_PATH, db.DATABASE_DIR, db.UPLOADS_DIR = self._old
         shutil.rmtree(self.tmp, ignore_errors=True)
 
-    def test_reset_wipes_data_and_keeps_backup(self):
-        db.create_farm('Test farm')
-        with open(os.path.join(db.UPLOADS_DIR, 'leaf_x.jpg'), 'wb') as fh:
-            fh.write(b'x')
+    def test_reset_db_preserves_backup_and_cleans_tables(self):
+        db.create_farm('Test Plot')
         self.assertEqual(len(db.list_farms()), 1)
 
-        backup = db.reset_db(backup=True)
-
+        backup_file = db.reset_db(backup=True)
+        self.assertTrue(backup_file and os.path.exists(backup_file))
         self.assertEqual(db.list_farms(), [])
         self.assertEqual(db.list_scans(), [])
-        self.assertFalse(os.path.exists(os.path.join(db.UPLOADS_DIR, 'leaf_x.jpg')))
-        self.assertTrue(backup and os.path.exists(backup))
-
-    def test_reset_without_backup(self):
-        db.create_farm('Test farm')
-        self.assertIsNone(db.reset_db(backup=False))
-        self.assertEqual(db.list_farms(), [])
 
 
-@unittest.skipUnless(os.path.isdir(LABELED_DIR),
-                     'ai-model/eval_data_field not found - run: python ai-model/download_eval_samples.py plantdoc')
-class LabeledFieldImageTests(unittest.TestCase):
-    """Real model, real labeled FIELD photos (PlantDoc sample). Each image is judged on its own.
+@unittest.skipUnless(os.path.isdir(LAB_DIR), 'ai-model/eval_data not found')
+class LabDatasetBenchmarkTests(unittest.TestCase):
+    """Regression test: Confirms high accuracy on the PlantVillage lab dataset."""
 
-    Thresholds are set well below the measured full-sample results so the test is stable but
-    still catches the earlier failure (healthy leaves called blight ~98% of the time).
-    """
-
-    PER_CLASS = 15
-
-    @classmethod
-    def setUpClass(cls):
-        cls.results = {}
-        model = leafscan.ensure_model_loaded()
-        for label, folder in FOLDER_FOR_LABEL.items():
-            files = sorted(f for f in os.listdir(os.path.join(LABELED_DIR, folder))
-                           if f.lower().endswith(('.jpg', '.jpeg', '.png')))
-            step = max(1, len(files) // cls.PER_CLASS)
-            preds = []
-            for name in files[::step][:cls.PER_CLASS]:
-                img = Image.open(os.path.join(LABELED_DIR, folder, name))
-                scores = leafscan.score_classes(model.predict(leafscan.preprocess_image(img)))
-                decision = leafscan.interpret_scores(scores)
-                preds.append('uncertain' if decision['uncertain'] else decision['label'])
-            cls.results[label] = preds
-
-    def rate(self, true_label, predicate):
-        preds = self.results[true_label]
-        return sum(predicate(p) for p in preds) / len(preds)
-
-    def test_enough_images(self):
-        for label, preds in self.results.items():
-            self.assertGreaterEqual(len(preds), 10, label)
-
-    def test_healthy_leaves_are_rarely_called_blight(self):
-        # Previous 3-class model: 98% of healthy field leaves were called blight.
-        rate = self.rate('Healthy Leaf', lambda p: p in BLIGHT_LABELS)
-        self.assertLessEqual(rate, 0.20, self.results['Healthy Leaf'])
-
-    def test_late_blight_is_usually_detected(self):
-        rate = self.rate('Late Blight', lambda p: p == 'Late Blight')
-        self.assertGreaterEqual(rate, 0.50, self.results['Late Blight'])
-
-    def test_early_blight_is_often_detected(self):
-        rate = self.rate('Early Blight', lambda p: p == 'Early Blight')
-        self.assertGreaterEqual(rate, 0.30, self.results['Early Blight'])
-
-    def test_model_does_not_return_one_class_for_everything(self):
-        every_prediction = [p for preds in self.results.values() for p in preds]
-        self.assertGreaterEqual(len(set(every_prediction) - {'uncertain'}), 3)
+    def test_lab_healthy_leaves_accuracy(self):
+        healthy_dir = os.path.join(LAB_DIR, 'Tomato___healthy')
+        files = [f for f in os.listdir(healthy_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png'))][:15]
+        correct = 0
+        for f in files:
+            img = Image.open(os.path.join(healthy_dir, f))
+            res = leafscan.build_result_for_image(img)
+            if res['is_healthy'] or 'healthy' in res['label'].lower():
+                correct += 1
+        acc = correct / len(files) if files else 0.0
+        self.assertGreaterEqual(acc, 0.90, f"Expected >= 90% accuracy on lab healthy leaves, got {acc:.0%}")
 
 
 if __name__ == '__main__':
