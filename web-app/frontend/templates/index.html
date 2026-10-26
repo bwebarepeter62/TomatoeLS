@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tomato Leaf Scan</title>
+    <meta
+      name="description"
+      content="Tomato Leaf Scan uses a local disease-detection model to inspect uploaded tomato leaves and explain the result."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+    <link rel="apple-touch-icon" href="icons/Icon-192.png">
+    <script src="https://kit.fontawesome.com/7279994a6e.js" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="topbar">
+        <div class="brand-wrap">
+          <div class="brand-mark">T</div>
+          <div>
+            <p class="eyebrow">AI Crop Health</p>
+            <h1>Tomato Leaf Scan</h1>
+          </div>
+        </div>
+        <nav class="nav-links" aria-label="Main navigation">
+          <a href="#about">About</a>
+          <a href="#scan">Scan</a>
+          <a href="#results">Results</a>
+        </nav>
+      </header>
+
+      <main>
+        <section class="hero card">
+          <div class="hero-copy">
+            <p class="eyebrow accent">Early disease detection</p>
+            <h2>Identify tomato leaf problems before they spread.</h2>
+            <p class="lede">
+              Upload a photo of a single tomato leaf and let the local detection model
+              estimate whether it is healthy or affected by a common disease.
+            </p>
+            <div class="hero-actions">
+              <a class="primary-btn" href="#scan">Scan a Tomato Leaf</a>
+              <a class="secondary-btn" href="#about">How it works</a>
+            </div>
+            <ul class="feature-list">
+              <li>On-device AI model</li>
+              <li>Healthy vs. disease classification</li>
+              <li>Actionable treatment guidance</li>
+            </ul>
+          </div>
+          <div class="hero-visual" aria-label="Tomato leaf illustration">
+            <div class="leaf-card">
+              <div class="leaf-icon">
+                <span>🌿</span>
+              </div>
+              <div class="leaf-details">
+                <p class="mini-label">Disease check</p>
+                <strong>Healthy leaf</strong>
+                <small>Ready for inspection</small>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="about" class="info-grid">
+          <article class="card info-card">
+            <span class="icon"><i class="fa-regular fa-camera"></i></span>
+            <h3>Upload a leaf</h3>
+            <p>Select a clear image of one tomato leaf and keep the photo well-lit.</p>
+          </article>
+          <article class="card info-card">
+            <span class="icon"><i class="fa-brands fa-openai"></i></span>
+            <h3>AI analysis</h3>
+            <p>The local model inspects the image and compares it to known tomato leaf conditions.</p>
+          </article>
+          <article class="card info-card">
+            <span class="icon"><i class="fa-solid fa-leaf"></i></span>
+            <h3>Smart guidance</h3>
+            <p>Receive prevention tips, treatment suggestions, and disease-specific advice.</p>
+          </article>
+        </section>
+
+        <section id="scan" class="card scan-panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow accent">Leaf inspection</p>
+              <h3>Scan or upload a tomato leaf image</h3>
+            </div>
+          </div>
+
+          <form id="scan-form" class="upload-form" enctype="multipart/form-data">
+            <div class="upload-box" id="upload-box">
+              <input id="image-input" type="file" accept="image/png, image/jpeg, image/webp" />
+              <label for="image-input" class="upload-label">
+                <span class="upload-emoji"><i class="fa-regular fa-images"></i></span>
+                <strong>Choose an image</strong>
+                <small>PNG, JPG, or WEBP</small>
+              </label>
+            </div>
+
+            <div id="preview-panel" class="preview-panel hidden" aria-live="polite">
+              <img id="preview-image" alt="Selected plant leaf preview" />
+              <button type="button" id="remove-image" class="ghost-btn">Remove image</button>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" id="analyze-btn" class="primary-btn large-btn">
+                Scan leaf
+              </button>
+            </div>
+          </form>
+
+          <div id="status-box" class="status-box neutral" aria-live="polite">
+            No image selected yet. Please choose a tomato leaf photo to begin.
+          </div>
+        </section>
+
+        <section id="results" class="results-panel hidden" aria-live="polite">
+          <div class="results-header">
+            <div>
+              <p class="eyebrow accent">Diagnosis result</p>
+              <h3 id="result-title">Scan complete</h3>
+            </div>
+            <button type="button" id="new-scan" class="secondary-btn">Scan another leaf</button>
+          </div>
+
+          <div class="result-layout">
+            <div class="result-image-wrap card">
+              <img id="result-image" alt="Leaf result image" />
+            </div>
+
+            <div class="result-content card">
+              <div class="confidence-row">
+                <span class="confidence-label">Prediction confidence</span>
+                <strong id="confidence-value">0%</strong>
+              </div>
+
+              <h4 id="disease-name">Healthy leaf</h4>
+              <p id="disease-summary" class="result-summary"></p>
+
+              <div class="meta-grid">
+                <div>
+                  <span class="meta-label">Type</span>
+                  <strong id="disease-type">Healthy</strong>
+                </div>
+                <div>
+                  <span class="meta-label">Cause</span>
+                  <strong id="disease-cause">—</strong>
+                </div>
+              </div>
+
+              <div class="tips-box">
+                <h5>What to do now</h5>
+                <ul id="stop-now"></ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="advice-grid">
+            <div class="card advice-card">
+              <h5>Prevention</h5>
+              <ul id="prevent-future"></ul>
+            </div>
+            <div class="card advice-card">
+              <h5>Spread control</h5>
+              <ul id="prevent-spread"></ul>
+            </div>
+            <div class="card advice-card">
+              <h5>Treatments</h5>
+              <ul id="treatments"></ul>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  </body>
+</html>

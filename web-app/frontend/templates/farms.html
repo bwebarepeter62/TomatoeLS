@@ -1,0 +1,417 @@
+{% extends "base.html" %}
+
+{% block title %}Tomato Farm Management — Tomato Leaf Scan{% endblock %}
+
+{% block content %}
+<div class="page-header-wrap">
+  <div class="header-titles">
+    <p class="eyebrow accent">Cultivation Records</p>
+    <h2>Tomato Farm Management</h2>
+    <p class="lede" style="margin-bottom:0;">
+      Organize your tomato fields, track varieties, planting dates, and monitor foliage health per plot.
+    </p>
+  </div>
+  <div class="header-action-btn">
+    <button type="button" class="primary-btn" id="open-add-farm-btn">
+      <i class="fa-solid fa-plus" style="margin-right:8px;"></i> Add New Farm
+    </button>
+  </div>
+</div>
+
+<!-- Quick Statistics Row -->
+<div class="metrics-row" id="farm-metrics-row">
+  <div class="card metric-pill-card">
+    <span class="metric-icon" style="background:#eaf8ea; color:var(--primary);">
+      <i class="fa-solid fa-tractor"></i>
+    </span>
+    <div>
+      <span class="meta-label">Total Farms</span>
+      <strong id="stat-total-farms">0</strong>
+    </div>
+  </div>
+
+  <div class="card metric-pill-card">
+    <span class="metric-icon" style="background:#fff6e6; color:#c68212;">
+      <i class="fa-solid fa-seedling"></i>
+    </span>
+    <div>
+      <span class="meta-label">Total Plants</span>
+      <strong id="stat-total-plants">0</strong>
+    </div>
+  </div>
+
+  <div class="card metric-pill-card">
+    <span class="metric-icon" style="background:#eef4ff; color:#2361b5;">
+      <i class="fa-solid fa-dna"></i>
+    </span>
+    <div>
+      <span class="meta-label">Varieties Tracked</span>
+      <strong id="stat-total-varieties">0</strong>
+    </div>
+  </div>
+</div>
+
+<!-- Farm Cards Grid -->
+<div id="farms-container" class="farms-grid">
+  <!-- Dynamically injected via JavaScript -->
+</div>
+
+<!-- Empty State -->
+<div id="farms-empty-state" class="card empty-state-card hidden">
+  <div class="empty-icon-wrap">
+    <i class="fa-solid fa-seedling"></i>
+  </div>
+  <h3>No tomato farms added yet</h3>
+  <p>
+    Register your first farm plot to organize leaf scans, record tomato varieties, and track planting cycles.
+  </p>
+  <button type="button" class="primary-btn" id="empty-add-farm-btn">
+    <i class="fa-solid fa-plus" style="margin-right:8px;"></i> Add Your First Farm
+  </button>
+</div>
+
+<!-- Add / Edit Farm Modal -->
+<div id="farm-modal" class="modal-backdrop hidden" aria-hidden="true">
+  <div class="modal-card card" role="dialog" aria-labelledby="modal-title">
+    <div class="modal-header">
+      <h3 id="modal-title">Add New Farm Plot</h3>
+      <button type="button" class="modal-close-btn" id="modal-close-btn" aria-label="Close dialog">&times;</button>
+    </div>
+
+    <form id="farm-form" class="modal-form">
+      <input type="hidden" id="farm-id" value="" />
+
+      <div class="form-group">
+        <label for="farm-name" class="form-label">Farm / Plot Name <span class="required">*</span></label>
+        <input type="text" id="farm-name" class="form-control" placeholder="e.g. Sunshine Acres Plot A" required maxlength="100" />
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="farm-location" class="form-label">Location / Region</label>
+          <input type="text" id="farm-location" class="form-control" placeholder="e.g. North Valley, Sector 4" maxlength="100" />
+        </div>
+        <div class="form-group">
+          <label for="farm-size" class="form-label">Farm Size</label>
+          <input type="text" id="farm-size" class="form-control" placeholder="e.g. 2.5 Acres or 500 m²" maxlength="50" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="farm-variety" class="form-label">Tomato Variety</label>
+          <input type="text" id="farm-variety" class="form-control" placeholder="e.g. Roma, MoneyMaker, Beefsteak" list="variety-suggestions" maxlength="80" />
+          <datalist id="variety-suggestions">
+            <option value="Roma">
+            <option value="MoneyMaker">
+            <option value="Beefsteak">
+            <option value="Cherry Tomato">
+            <option value="San Marzano">
+            <option value="Celebrity">
+            <option value="Better Boy">
+          </datalist>
+        </div>
+        <div class="form-group">
+          <label for="farm-planting-date" class="form-label">Planting Date</label>
+          <input type="date" id="farm-planting-date" class="form-control" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="farm-plant-count" class="form-label">Estimated Number of Plants</label>
+        <input type="number" id="farm-plant-count" class="form-control" placeholder="e.g. 500" min="0" max="1000000" />
+      </div>
+
+      <div class="form-group">
+        <label for="farm-notes" class="form-label">Notes & Growing Method</label>
+        <textarea id="farm-notes" class="form-control" rows="3" placeholder="e.g. Drip irrigation, open field, organic mulch..."></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="ghost-btn" id="modal-cancel-btn">Cancel</button>
+        <button type="submit" class="primary-btn" id="save-farm-btn">Save Farm</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="delete-modal" class="modal-backdrop hidden" aria-hidden="true">
+  <div class="modal-card card delete-confirm-card" role="dialog" aria-labelledby="delete-modal-title">
+    <div class="modal-header">
+      <h3 id="delete-modal-title" style="color:var(--danger);"><i class="fa-solid fa-triangle-exclamation" style="margin-right:8px;"></i>Confirm Deletion</h3>
+      <button type="button" class="modal-close-btn" id="delete-modal-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p>Are you sure you want to delete <strong id="delete-farm-name-display">this farm</strong>?</p>
+      <p class="modal-note" style="color:var(--muted); font-size:0.9rem;">
+        Historical scan records linked to this farm will be safely preserved and tagged as archived.
+      </p>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="ghost-btn" id="delete-cancel-btn">Cancel</button>
+      <button type="button" class="danger-btn" id="confirm-delete-btn">Delete Farm</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let farmsList = [];
+  let currentDeleteFarmId = null;
+
+  async function loadFarms() {
+    try {
+      const res = await fetch('/api/farms');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to fetch farms');
+      farmsList = data.farms || [];
+      renderFarms();
+      updateMetrics();
+    } catch (err) {
+      console.error(err);
+      showToast('Error loading farms: ' + err.message, 'error');
+    }
+  }
+
+  function updateMetrics() {
+    const totalFarms = farmsList.length;
+    let totalPlants = 0;
+    const varieties = new Set();
+
+    farmsList.forEach(f => {
+      totalPlants += parseInt(f.plant_count, 10) || 0;
+      if (f.variety && f.variety.trim()) {
+        varieties.add(f.variety.trim().toLowerCase());
+      }
+    });
+
+    document.getElementById('stat-total-farms').textContent = totalFarms;
+    document.getElementById('stat-total-plants').textContent = totalPlants.toLocaleString();
+    document.getElementById('stat-total-varieties').textContent = varieties.size;
+  }
+
+  function renderFarms() {
+    const container = document.getElementById('farms-container');
+    const emptyState = document.getElementById('farms-empty-state');
+
+    if (farmsList.length === 0) {
+      container.innerHTML = '';
+      emptyState.classList.remove('hidden');
+      return;
+    }
+
+    emptyState.classList.add('hidden');
+    container.innerHTML = farmsList.map(farm => {
+      const variety = farm.variety ? farm.variety : 'Not specified';
+      const location = farm.location ? farm.location : 'Location unlisted';
+      const size = farm.size ? farm.size : 'Size unrecorded';
+      const plants = (farm.plant_count > 0) ? `${farm.plant_count.toLocaleString()} plants` : 'Unspecified';
+      const plantingDate = farm.planting_date ? farm.planting_date : 'Not recorded';
+      const notes = farm.notes ? farm.notes : 'No extra notes recorded.';
+      const scanCount = farm.scan_count || 0;
+      const diseaseCount = farm.disease_scan_count || 0;
+
+      return `
+        <article class="card farm-card" id="farm-card-${farm.id}">
+          <div class="farm-card-header">
+            <div class="farm-title-wrap">
+              <span class="farm-icon"><i class="fa-solid fa-tractor"></i></span>
+              <div>
+                <h3 class="farm-title">${escapeHtml(farm.name)}</h3>
+                <span class="farm-location-badge">
+                  <i class="fa-solid fa-location-dot"></i> ${escapeHtml(location)}
+                </span>
+              </div>
+            </div>
+            <div class="farm-scan-pill">
+              <span class="pill-badge ${diseaseCount > 0 ? 'badge-warning' : 'badge-healthy'}">
+                <i class="fa-solid fa-clipboard-check"></i> ${scanCount} scan${scanCount === 1 ? '' : 's'}
+              </span>
+            </div>
+          </div>
+
+          <div class="farm-details-grid">
+            <div class="farm-detail-item">
+              <span class="meta-label">Plot Size</span>
+              <strong>${escapeHtml(size)}</strong>
+            </div>
+            <div class="farm-detail-item">
+              <span class="meta-label">Tomato Variety</span>
+              <strong style="color:var(--primary-strong);">${escapeHtml(variety)}</strong>
+            </div>
+            <div class="farm-detail-item">
+              <span class="meta-label">Planting Date</span>
+              <strong>${escapeHtml(plantingDate)}</strong>
+            </div>
+            <div class="farm-detail-item">
+              <span class="meta-label">Plant Count</span>
+              <strong>${plants}</strong>
+            </div>
+          </div>
+
+          ${farm.notes ? `
+            <div class="farm-notes-box">
+              <span class="meta-label">Growing Notes</span>
+              <p>${escapeHtml(notes)}</p>
+            </div>
+          ` : ''}
+
+          <div class="farm-card-footer">
+            <div class="farm-actions-left">
+              <a href="/scan" class="secondary-btn small-btn" title="Scan a leaf for this farm">
+                <i class="fa-solid fa-camera"></i> Scan Leaf
+              </a>
+              <a href="/history?farm_id=${farm.id}" class="ghost-btn small-btn" title="View scan history for this farm">
+                <i class="fa-solid fa-clock-rotate-left"></i> History
+              </a>
+            </div>
+            <div class="farm-actions-right">
+              <button type="button" class="ghost-btn icon-btn" onclick="openEditFarm(${farm.id})" aria-label="Edit Farm">
+                <i class="fa-solid fa-pen-to-square"></i>
+              </button>
+              <button type="button" class="ghost-btn icon-btn danger-icon-btn" onclick="openDeleteFarm(${farm.id}, '${escapeHtml(farm.name)}')" aria-label="Delete Farm">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
+          </div>
+        </article>
+      `;
+    }).join('');
+  }
+
+  function escapeHtml(text) {
+    if (!text) return '';
+    return String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  // Modal Management
+  const farmModal = document.getElementById('farm-modal');
+  const farmForm = document.getElementById('farm-form');
+  const modalTitle = document.getElementById('modal-title');
+
+  function openAddFarm() {
+    farmForm.reset();
+    document.getElementById('farm-id').value = '';
+    modalTitle.textContent = 'Add New Tomato Farm';
+    farmModal.classList.remove('hidden');
+    document.getElementById('farm-name').focus();
+  }
+
+  function openEditFarm(farmId) {
+    const farm = farmsList.find(f => f.id === farmId);
+    if (!farm) return;
+    document.getElementById('farm-id').value = farm.id;
+    document.getElementById('farm-name').value = farm.name || '';
+    document.getElementById('farm-location').value = farm.location || '';
+    document.getElementById('farm-size').value = farm.size || '';
+    document.getElementById('farm-variety').value = farm.variety || '';
+    document.getElementById('farm-planting-date').value = farm.planting_date || '';
+    document.getElementById('farm-plant-count').value = farm.plant_count || '';
+    document.getElementById('farm-notes').value = farm.notes || '';
+    modalTitle.textContent = 'Edit Farm Details';
+    farmModal.classList.remove('hidden');
+  }
+
+  function closeFarmModal() {
+    farmModal.classList.add('hidden');
+  }
+
+  document.getElementById('open-add-farm-btn').addEventListener('click', openAddFarm);
+  document.getElementById('empty-add-farm-btn').addEventListener('click', openAddFarm);
+  document.getElementById('modal-close-btn').addEventListener('click', closeFarmModal);
+  document.getElementById('modal-cancel-btn').addEventListener('click', closeFarmModal);
+
+  farmForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('farm-id').value;
+    const name = document.getElementById('farm-name').value.trim();
+    if (!name) {
+      showToast('Farm name is required', 'error');
+      return;
+    }
+
+    const payload = {
+      name: name,
+      location: document.getElementById('farm-location').value.trim(),
+      size: document.getElementById('farm-size').value.trim(),
+      variety: document.getElementById('farm-variety').value.trim(),
+      planting_date: document.getElementById('farm-planting-date').value,
+      plant_count: parseInt(document.getElementById('farm-plant-count').value, 10) || 0,
+      notes: document.getElementById('farm-notes').value.trim()
+    };
+
+    const submitBtn = document.getElementById('save-farm-btn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Saving...';
+
+    try {
+      const url = id ? `/api/farms/${id}` : '/api/farms';
+      const method = id ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to save farm');
+
+      closeFarmModal();
+      showToast(id ? 'Farm details updated successfully' : 'New farm added successfully', 'success');
+      await loadFarms();
+    } catch (err) {
+      console.error(err);
+      showToast(err.message, 'error');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Save Farm';
+    }
+  });
+
+  // Delete Modal
+  const deleteModal = document.getElementById('delete-modal');
+  function openDeleteFarm(farmId, farmName) {
+    currentDeleteFarmId = farmId;
+    document.getElementById('delete-farm-name-display').textContent = farmName;
+    deleteModal.classList.remove('hidden');
+  }
+
+  function closeDeleteModal() {
+    deleteModal.classList.add('hidden');
+    currentDeleteFarmId = null;
+  }
+
+  document.getElementById('delete-modal-close').addEventListener('click', closeDeleteModal);
+  document.getElementById('delete-cancel-btn').addEventListener('click', closeDeleteModal);
+
+  document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
+    if (!currentDeleteFarmId) return;
+    const btn = document.getElementById('confirm-delete-btn');
+    btn.disabled = true;
+    btn.textContent = 'Deleting...';
+    try {
+      const res = await fetch(`/api/farms/${currentDeleteFarmId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to delete farm');
+      closeDeleteModal();
+      showToast('Farm deleted successfully', 'success');
+      await loadFarms();
+    } catch (err) {
+      console.error(err);
+      showToast(err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Delete Farm';
+    }
+  });
+
+  // Initial load
+  document.addEventListener('DOMContentLoaded', loadFarms);
+</script>
+{% endblock %}

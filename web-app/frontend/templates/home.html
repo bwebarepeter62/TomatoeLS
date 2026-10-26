@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}Tomato Leaf Scan — Early Disease Detection & Farm Management{% endblock %}
+
+{% block content %}
+<section class="hero card hero-landing">
+  <div class="hero-copy">
+    <p class="eyebrow accent">AI-Powered Agriculture</p>
+    <h2>Detect tomato leaf diseases early. Protect your harvest.</h2>
+    <p class="lede">
+      Tomato Leaf Scan helps tomato farmers identify crop diseases before they spread. 
+      Upload leaf photos for instant on-device AI diagnosis, keep field logs across your farms, 
+      and receive practical, science-backed treatment steps.
+    </p>
+    <div class="hero-actions">
+      <a class="primary-btn hero-cta-btn" href="{{ url_for('scan_page') }}">
+        <i class="fa-solid fa-leaf" style="margin-right:8px;"></i> Scan a Leaf
+      </a>
+      <a class="secondary-btn" href="#features">
+        <i class="fa-solid fa-compass" style="margin-right:8px;"></i> Explore Features
+      </a>
+    </div>
+    <ul class="feature-list">
+      <li><i class="fa-solid fa-bolt accent-icon"></i> Instant On-Device AI</li>
+      <li><i class="fa-solid fa-tractor accent-icon"></i> Multi-Farm Tracking</li>
+      <li><i class="fa-solid fa-shield-halved accent-icon"></i> Disease Treatment Guidance</li>
+      <li><i class="fa-solid fa-chart-pie accent-icon"></i> Crop Health Analytics</li>
+    </ul>
+  </div>
+
+  <div class="hero-visual landing-hero-visual">
+    <div class="hero-image-card">
+      <img src="{{ url_for('static', filename='images/hero-tomato.jpg') }}" alt="Vibrant tomato plants on an organic farm" class="hero-landing-img" />
+      <div class="hero-floating-badge">
+        <div class="badge-icon"><i class="fa-solid fa-seedling"></i></div>
+        <div class="badge-text">
+          <small class="mini-label">Crop Protection</small>
+          <strong>15+ Tomato Conditions</strong>
+          <span>Instant leaf diagnosis</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How It Works Section -->
+<section id="how-it-works" class="section-container">
+  <div class="section-header text-center">
+    <p class="eyebrow accent">Simple Three-Step Workflow</p>
+    <h3>How Tomato Leaf Scan Works</h3>
+    <p class="section-subtext">No complicated equipment required. Diagnose plant stress directly from any smartphone or computer camera.</p>
+  </div>
+
+  <div class="steps-grid">
+    <div class="step-card card">
+      <div class="step-number">1</div>
+      <div class="step-icon"><i class="fa-solid fa-camera"></i></div>
+      <h4>Upload or Take a Photo</h4>
+      <p>Photograph a single affected tomato leaf in clear daylight. Capture both sides of the leaf if symptoms are subtle.</p>
+    </div>
+
+    <div class="step-card card">
+      <div class="step-number">2</div>
+      <div class="step-icon"><i class="fa-solid fa-microchip"></i></div>
+      <h4>AI Model Analyzes the Leaf</h4>
+      <p>Our neural computer vision model scans the foliage for telltale spots, wilting patterns, fungal moulds, and pest damage.</p>
+    </div>
+
+    <div class="step-card card">
+      <div class="step-number">3</div>
+      <div class="step-icon"><i class="fa-solid fa-file-medical"></i></div>
+      <h4>Review Diagnosis & Guidance</h4>
+      <p>Get immediate confidence scores, symptom descriptions, immediate containment steps, and recommended treatments.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Key Features Section -->
+<section id="features" class="section-container">
+  <div class="section-header">
+    <p class="eyebrow accent">Integrated Toolset</p>
+    <h3>Designed for Tomato Farmers & Agronomists</h3>
+    <p class="section-subtext">Manage every dimension of tomato foliage health in one centralized, intuitive application.</p>
+  </div>
+
+  <div class="features-cards-grid">
+    <div class="feature-card card">
+      <div class="feature-icon-wrap" style="background:#eaf8ea; color:var(--primary);">
+        <i class="fa-solid fa-leaf"></i>
+      </div>
+      <h4>AI Tomato Leaf Scanning</h4>
+      <p>Upload high-resolution leaf photos to detect Early Blight, Late Blight, Bacterial Spot, Mosaic Virus, Molds, and 10+ other tomato conditions.</p>
+      <a href="{{ url_for('scan_page') }}" class="feature-link">
+        Open Scanner <i class="fa-solid fa-arrow-right"></i>
+      </a>
+    </div>
+
+    <div class="feature-card card">
+      <div class="feature-icon-wrap" style="background:#fff6e6; color:#c68212;">
+        <i class="fa-solid fa-tractor"></i>
+      </div>
+      <h4>Tomato Farm Management</h4>
+      <p>Register and organize your tomato plots. Track farm acreage, planted varieties (Roma, MoneyMaker, Beefsteak), planting dates, and plant counts.</p>
+      <a href="{{ url_for('farms_page') }}" class="feature-link">
+        Manage Farms <i class="fa-solid fa-arrow-right"></i>
+      </a>
+    </div>
+
+    <div class="feature-card card">
+      <div class="feature-icon-wrap" style="background:#eef4ff; color:#2361b5;">
+        <i class="fa-solid fa-chart-line"></i>
+      </div>
+      <h4>Crop Monitoring Dashboard</h4>
+      <p>Live health summary calculated from your real field scans. Monitor disease frequency, track healthy ratios, and view time-series activity trends.</p>
+      <a href="{{ url_for('monitoring_page') }}" class="feature-link">
+        View Dashboard <i class="fa-solid fa-arrow-right"></i>
+      </a>
+    </div>
+
+    <div class="feature-card card">
+      <div class="feature-icon-wrap" style="background:#f9f0ff; color:#7832a8;">
+        <i class="fa-solid fa-clock-rotate-left"></i>
+      </div>
+      <h4>Scan Diagnostic History</h4>
+      <p>Searchable, filterable archive of every past inspection. Revisit diagnosed symptoms, compare leaf images, and safely manage records.</p>
+      <a href="{{ url_for('history_page') }}" class="feature-link">
+        Browse History <i class="fa-solid fa-arrow-right"></i>
+      </a>
+    </div>
+
+    <div class="feature-card card">
+      <div class="feature-icon-wrap" style="background:#ffebee; color:#b35337;">
+        <i class="fa-solid fa-notes-medical"></i>
+      </div>
+      <h4>Treatment & Spread Guidance</h4>
+      <p>Every diagnosis comes with clear cultural, organic, and chemical management advice to prevent pathogens from spreading across neighboring beds.</p>
+      <a href="{{ url_for('scan_page') }}" class="feature-link">
+        Explore Guidance <i class="fa-solid fa-arrow-right"></i>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Benefits Section -->
+<section id="benefits" class="section-container">
+  <div class="benefits-panel card">
+    <div class="benefits-intro">
+      <p class="eyebrow accent">Why Use Leaf Scan</p>
+      <h3>Built to Help You Make Informed Crop Decisions</h3>
+      <p>
+        Agricultural success depends on timely intervention. Identifying early signs of blights or virus infections can mean the difference between saving a bed and losing a whole harvest.
+      </p>
+    </div>
+
+    <div class="benefits-grid">
+      <div class="benefit-item">
+        <div class="benefit-bullet"><i class="fa-solid fa-check"></i></div>
+        <div>
+          <strong>Catch Diseases Before Outbreaks</strong>
+          <p>Detect blights, spots, and leaf curling while symptoms are confined to lower leaves.</p>
+        </div>
+      </div>
+
+      <div class="benefit-item">
+        <div class="benefit-bullet"><i class="fa-solid fa-check"></i></div>
+        <div>
+          <strong>Maintain Verifiable Farm Records</strong>
+          <p>Keep a timestamped image record of crop conditions across planting seasons.</p>
+        </div>
+      </div>
+
+      <div class="benefit-item">
+        <div class="benefit-bullet"><i class="fa-solid fa-check"></i></div>
+        <div>
+          <strong>Reduce Unnecessary Pesticide Use</strong>
+          <p>Distinguish healthy foliage from fungal or pest issues to target interventions accurately.</p>
+        </div>
+      </div>
+
+      <div class="benefit-item">
+        <div class="benefit-bullet"><i class="fa-solid fa-check"></i></div>
+        <div>
+          <strong>Easy Field Operation</strong>
+          <p>Clean interface designed to work smoothly on mobile phones, tablets, or farm office computers.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Call to Action Banner -->
+<section class="cta-banner card">
+  <div class="cta-content">
+    <p class="eyebrow" style="color:var(--soft-green);">Ready to inspect your plants?</p>
+    <h3>Start Scanning Your Tomato Leaves Today</h3>
+    <p>Upload a photo now to run on-device disease detection and safeguard your tomato crops.</p>
+    <div class="cta-buttons">
+      <a class="primary-btn cta-primary" href="{{ url_for('scan_page') }}">
+        <i class="fa-solid fa-camera" style="margin-right:8px;"></i> Open AI Scanner
+      </a>
+      <a class="secondary-btn cta-secondary" href="{{ url_for('farms_page') }}">
+        <i class="fa-solid fa-plus" style="margin-right:8px;"></i> Add a Farm Plot
+      </a>
+    </div>
+  </div>
+</section>
+{% endblock %}

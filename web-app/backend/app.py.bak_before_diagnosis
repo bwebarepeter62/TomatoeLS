@@ -1,0 +1,693 @@
+import json
+import os
+import sys
+import uuid
+from datetime import datetime
+from typing import Any
+
+import numpy as np
+from flask import Flask, jsonify, redirect, render_template, request, url_for
+from PIL import Image, UnidentifiedImageError
+import tensorflow as tf
+
+# Project-relative path resolution
+BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
+WEB_APP_DIR = os.path.abspath(os.path.join(BACKEND_DIR, '..'))
+PROJECT_ROOT = os.path.abspath(os.path.join(WEB_APP_DIR, '..'))
+TEMPLATE_DIR = os.path.join(WEB_APP_DIR, 'frontend', 'templates')
+STATIC_DIR = os.path.join(WEB_APP_DIR, 'frontend', 'static')
+UPLOADS_DIR = os.path.join(STATIC_DIR, 'uploads')
+
+# Check model location with fallback
+MODEL_CANDIDATES = [
+    os.path.join(BACKEND_DIR, 'tomato_disease_model.h5'),
+    os.path.join(PROJECT_ROOT, 'tomato_disease_model.h5'),
+    os.path.join(PROJECT_ROOT, 'backend', 'tomato_disease_model.h5'),
+    os.path.join(PROJECT_ROOT, 'web-app', 'backend', 'tomato_disease_model.h5'),
+    os.path.join(PROJECT_ROOT, 'ai-model', 'models', 'tomato_disease_model.h5'),
+]
+MODEL_PATH = next((p for p in MODEL_CANDIDATES if os.path.exists(p)), MODEL_CANDIDATES[0])
+
+# 3 Classes: Keras ASCII sorting of training folders
+# Index 0: Early Blight, Index 1: Late Blight, Index 2: Healthy
+CLASS_NAMES = ['Early Blight', 'Late Blight', 'Healthy']
+
+# Import database module
+import db
+
+app = Flask(__name__, static_folder=STATIC_DIR, template_folder=TEMPLATE_DIR)
+
+# Initialize SQLite database schema
+db.init_db()
+
+RAW_LABELS = [
+    'Aphids',
+    'Early Blight',
+    'Healthy Leaf-',
+    'Leaf Curl',
+    'Leafhoppers and Jassids',
+    'Molds',
+    'Mosaic Virus',
+    'Septoria',
+    'bactarial canker',
+    'bacterial spot',
+    'flea beetle',
+    'late_blight',
+    'leafminer',
+    'powedry_mildew',
+    'yellow curl virus',
+]
+
+LABEL_MAP = {
+    'Aphids': 'Aphids',
+    'Early Blight': 'Early Blight',
+    'Healthy Leaf-': 'Healthy Leaf',
+    'Leaf Curl': 'Leaf Curl',
+    'Leafhoppers and Jassids': 'Leafhoppers and Jassids',
+    'Molds': 'Molds',
+    'Mosaic Virus': 'Mosaic Virus',
+    'Septoria': 'Septoria',
+    'bactarial canker': 'Bacterial Canker',
+    'bacterial spot': 'Bacterial Spot',
+    'flea beetle': 'Flea Beetle',
+    'late_blight': 'Late Blight',
+    'leafminer': 'Leafminer',
+    'powedry_mildew': 'Powdery Mildew',
+    'yellow curl virus': 'Yellow Curl Virus',
+}
+
+DAMAGE_DB = {
+    'Early Blight': {
+        'name': 'Early blight',
+        'type': 'fungal',
+        'summary': 'Dark brown spots with concentric rings and yellow halos on lower leaves.',
+        'cause': 'Fungus surviving in debris and soil, spread by wind and splash. Favoured by warm, humid weather.',
+        'effects': ['Lower leaves yellow and drop', 'Reduced photosynthesis, smaller fruit', 'Sunken stem lesions'],
+        'stopNow': ['Remove worst lower leaves and bag them', 'Spray a protectant fungicide', 'Water at the base only'],
+        'preventSpread': ['Do not work when plants are wet', 'Disinfect tools between plants', 'Burn infected leaves; do not compost'],
+        'preventFuture': ['Rotate 2-3 years without tomato/potato', 'Stake and space for airflow', 'Use clean seed'],
+        'treatments': ['Copper fungicide', 'Broad protectant fungicide', 'Bio fungicide'],
+        'seeExpertIf': 'More than a third of leaves are affected, or spots appear on fruit.',
+    },
+    'Late Blight': {
+        'name': 'Late blight',
+        'type': 'fungal',
+        'summary': 'Large dark water-soaked blotches with pale grey rims spreading from leaf edges.',
+        'cause': 'Water mould spread by wind and rain. Explodes in cool, wet weather.',
+        'effects': ['Leaves and stems collapse quickly', 'Fruit can rot quickly', 'Whole crop loss within a week'],
+        'stopNow': ['Act today - it moves fast', 'Pull and bag the worst plants', 'Do not overhead water'],
+        'preventSpread': ['Bag and burn infected plants', 'Clean boots, tools, crates', 'Warn neighbours'],
+        'preventFuture': ['Resistant varieties', 'No tomatoes near potatoes', 'Drip irrigation'],
+        'treatments': ['Systemic + protectant fungicide', 'Copper protectant', 'Remove infected plants'],
+        'seeExpertIf': 'Contact your extension officer today.',
+    },
+    'Healthy Leaf': {
+        'name': 'Healthy leaf',
+        'type': 'none',
+        'summary': 'Even green leaf with no spots, curling, moulds, or pests visible.',
+        'cause': 'No disease detected. Keep monitoring lower leaves.',
+        'effects': ['No yield loss expected from this leaf'],
+        'stopNow': ['Nothing to treat right now', 'Scout every 3-4 days'],
+        'preventSpread': ['Wash hands and tools between plots', 'Quarantine new seedlings for a week'],
+        'preventFuture': ['Water at base in the morning', 'Mulch the soil', 'Check undersides for pests weekly'],
+        'treatments': ['Bio spray (optional)', 'Mulch and airflow'],
+        'seeExpertIf': 'No action required unless symptoms change.',
+    },
+    'Aphids': {
+        'name': 'Aphids',
+        'type': 'pest',
+        'summary': 'Clusters of small soft-bodied insects, often on the underside of leaves and new shoots.',
+        'cause': 'Aphids multiply fast in warm, dry weather and feed on plant sap, causing honeydew and sometimes sooty mould.',
+        'effects': ['Leaves curl, yellow and stunt', 'Honeydew attracts mould', 'New shoots are worst affected'],
+        'stopNow': ['Spray strong water to knock them off', 'Apply insecticidal soap or neem oil', 'Remove heavily infested shoots'],
+        'preventSpread': ['Check new growth weekly', 'Avoid excess nitrogen fertiliser', 'Keep weeds down around beds'],
+        'preventFuture': ['Plant companion flowers', 'Use row covers on young plants', 'Encourage beneficial insects'],
+        'treatments': ['Insecticidal soap', 'Neem oil', 'Imidacloprid (severe cases)'],
+        'seeExpertIf': 'Plant growth stalls or the infestation spreads to the whole field.',
+    },
+    'Bacterial Spot': {
+        'name': 'Bacterial spot',
+        'type': 'bacterial',
+        'summary': 'Small dark water-soaked spots on leaves that turn brown with yellow halos; spots also appear on fruit.',
+        'cause': 'Bacteria spread by rain splash, contaminated seed, and tools. Favoured by warm, wet, windy weather.',
+        'effects': ['Leaves drop early', 'Fruit develops raised dark scabs', 'Yield and market value drop'],
+        'stopNow': ['Remove and destroy infected leaves and fruit', 'Apply copper-based bactericide', 'Do not work in the field when wet'],
+        'preventSpread': ['Disinfect tools with 70% alcohol', 'Avoid overhead irrigation', 'Do not save seed from infected plants'],
+        'preventFuture': ['Use certified disease-free seed', 'Rotate 2-3 years without tomato/pepper', 'Use drip irrigation only'],
+        'treatments': ['Copper bactericide', 'Copper + mancozeb', 'Bio control'],
+        'seeExpertIf': 'Fruit is heavily spotted or more than a quarter of leaves show symptoms.',
+    },
+    'Bacterial Canker': {
+        'name': 'Bacterial canker',
+        'type': 'bacterial',
+        'summary': 'Wilting leaves that curl upward, often on one side of the plant, with brown streaks inside the stem.',
+        'cause': 'Bacteria live in seed and soil, entering through wounds. Spreads through pruning tools and splashing water.',
+        'effects': ['Sudden wilting of young leaves', 'Stems show brown streaks when cut', 'Plant eventually collapses'],
+        'stopNow': ['Remove and destroy infected plants', 'Disinfect tools with 70% alcohol', 'Avoid overhead watering'],
+        'preventSpread': ['Do not work in the field when wet', 'Clean tools between every plant', 'Control weed hosts'],
+        'preventFuture': ['Use certified seed', 'Rotate 2-3 years', 'Graft onto resistant rootstock'],
+        'treatments': ['Copper bactericide', 'Remove infected plants'],
+        'seeExpertIf': 'Wilting spreads to more plants within days.',
+    },
+    'Leaf Curl': {
+        'name': 'Leaf curl',
+        'type': 'viral',
+        'summary': 'Leaves curl upward or downward, thicken, and become leathery. Growth is stunted.',
+        'cause': 'Often caused by viruses spread by whiteflies, or by herbicide drift and stress.',
+        'effects': ['Growth is stunted', 'Fewer and smaller fruit', 'Flowers may drop'],
+        'stopNow': ['Remove severely affected plants', 'Control whiteflies with yellow sticky traps', 'Do not save seed'],
+        'preventSpread': ['Remove weeds that host whiteflies', 'Isolate new plants', 'Use row covers over young plants'],
+        'preventFuture': ['Plant resistant varieties', 'Rotate crops', 'Control whiteflies early'],
+        'treatments': ['Neem oil', 'Insecticidal soap', 'Yellow sticky traps'],
+        'seeExpertIf': 'Curling appears on many plants within a week.',
+    },
+    'Leafhoppers and Jassids': {
+        'name': 'Leafhoppers and Jassids',
+        'type': 'pest',
+        'summary': 'Small wedge-shaped insects that jump when disturbed. Leaves show stippling and yellow edges.',
+        'cause': 'Leafhoppers feed on sap and can transmit viruses. Favoured by warm, dry weather and weedy fields.',
+        'effects': ['Leaves yellow and curl at edges', 'Stunted growth', 'Fruit size reduced'],
+        'stopNow': ['Spray neem oil or insecticidal soap', 'Remove weeds around the field', 'Use yellow sticky traps'],
+        'preventSpread': ['Keep field borders clean', 'Avoid moving through the crop when wet', 'Isolate new plants'],
+        'preventFuture': ['Rotate crops', 'Plant trap crops', 'Use row covers on seedlings'],
+        'treatments': ['Neem oil', 'Insecticidal soap', 'Imidacloprid'],
+        'seeExpertIf': 'Yellowing spreads to the whole field despite treatment.',
+    },
+    'Molds': {
+        'name': 'Leaf mould',
+        'type': 'fungal',
+        'summary': 'Pale green to yellow patches on the upper leaf surface with olive-green velvety mould underneath.',
+        'cause': 'Fungus that thrives in cool, humid conditions with poor airflow. Common in greenhouses and dense plantings.',
+        'effects': ['Leaves drop early', 'Yield reduced', 'Fruit quality drops'],
+        'stopNow': ['Improve airflow by pruning lower leaves', 'Reduce humidity: water at base, ventilate', 'Remove infected leaves'],
+        'preventSpread': ['Do not overhead water', 'Space plants wider', 'Disinfect tools'],
+        'preventFuture': ['Resistant varieties', 'Rotate crops', 'Drip irrigation', 'Ventilation in greenhouses'],
+        'treatments': ['Chlorothalonil', 'Copper fungicide', 'Bio fungicide'],
+        'seeExpertIf': 'Mould spreads despite humidity control.',
+    },
+    'Mosaic Virus': {
+        'name': 'Tomato mosaic virus',
+        'type': 'viral',
+        'summary': 'Mottled light and dark green patches on leaves; leaves may pucker and distort.',
+        'cause': 'Spread mainly by contact — hands, tools, and plant sap. Also in seed. Highly persistent in soil debris.',
+        'effects': ['Mottled, puckered leaves', 'Stunted growth', 'Reduced fruit set and size'],
+        'stopNow': ['Remove and destroy infected plants', 'Wash hands and tools with soap', 'Do not save seed'],
+        'preventSpread': ['Wash hands between plants', 'Disinfect tools', 'Remove weeds'],
+        'preventFuture': ['Use certified virus-free seed', 'Resistant varieties', 'Rotate 2+ years'],
+        'treatments': ['No chemical cure; remove infected plants', 'Aphid control with neem oil'],
+        'seeExpertIf': 'Symptoms appear on many plants — consider replanting with clean stock.',
+    },
+    'Septoria': {
+        'name': 'Septoria leaf spot',
+        'type': 'fungal',
+        'summary': 'Small circular spots with grey or tan centers and dark borders, starting on lower leaves.',
+        'cause': 'Fungus that survives in debris. Spread by splashing water and wind. Favoured by warm, wet weather.',
+        'effects': ['Lower leaves yellow, dry, and drop', 'Fruit exposed to sunscald', 'Yield reduced'],
+        'stopNow': ['Remove and bag affected lower leaves', 'Apply a protectant fungicide', 'Water at the base only'],
+        'preventSpread': ['Do not work when plants are wet', 'Disinfect tools', 'Remove crop debris'],
+        'preventFuture': ['Rotate 2-3 years', 'Stake plants', 'Drip irrigation'],
+        'treatments': ['Chlorothalonil', 'Copper fungicide', 'Bio fungicide'],
+        'seeExpertIf': 'More than a third of leaves are affected.',
+    },
+    'Flea Beetle': {
+        'name': 'Flea beetle',
+        'type': 'pest',
+        'summary': 'Tiny dark beetles that jump when disturbed; leaves show small round shot-holes.',
+        'cause': 'Beetles overwinter in soil and emerge in spring, feeding on young leaves. Worst in dry, warm springs.',
+        'effects': ['Small round holes in leaves', 'Seedlings can be killed', 'Growth stunted'],
+        'stopNow': ['Apply insecticidal soap or neem', 'Use row covers on young plants', 'Place yellow sticky traps'],
+        'preventSpread': ['Remove weeds that host beetles', 'Rotate crops', 'Delay planting until beetles are gone'],
+        'preventFuture': ['Row covers over seedlings', 'Companion plants', 'Rotate crops'],
+        'treatments': ['Insecticidal soap', 'Neem oil', 'Diatomaceous earth'],
+        'seeExpertIf': 'Seedlings are dying or the crop is losing leaves fast.',
+    },
+    'Leafminer': {
+        'name': 'Leafminer',
+        'type': 'pest',
+        'summary': 'Winding white trails inside leaves where larvae tunnel through the tissue.',
+        'cause': 'Small flies lay eggs in leaf tissue; larvae mine tunnels. Common in warm, dry weather.',
+        'effects': ['Leaves lose photosynthetic area', 'Heavy infestations reduce yield', 'Damage allows secondary infections'],
+        'stopNow': ['Pick and destroy mined leaves', 'Use yellow sticky traps', 'Apply neem oil or spinosad'],
+        'preventSpread': ['Remove infested leaves', 'Keep field free of weeds', 'Rotate crops'],
+        'preventFuture': ['Row covers on young plants', 'Rotate crops', 'Remove crop debris'],
+        'treatments': ['Spinosad', 'Neem oil', 'Yellow sticky traps'],
+        'seeExpertIf': 'Damage covers most leaves.',
+    },
+    'Powdery Mildew': {
+        'name': 'Powdery mildew',
+        'type': 'fungal',
+        'summary': 'White powdery coating on leaves and stems, usually starting on the upper surface.',
+        'cause': 'Fungus favoured by warm days, cool nights, and humid air with poor airflow.',
+        'effects': ['Leaves yellow and dry', 'Growth stunted', 'Yield reduced'],
+        'stopNow': ['Improve airflow by pruning', 'Apply potassium bicarbonate or sulfur spray', 'Remove worst leaves'],
+        'preventSpread': ['Space plants wider', 'Do not crowd plants', 'Water at base in the morning'],
+        'preventFuture': ['Resistant varieties', 'Rotate crops', 'Good airflow'],
+        'treatments': ['Potassium bicarbonate', 'Sulfur spray', 'Bio fungicide'],
+        'seeExpertIf': 'Mildew spreads to fruit or most of the crop.',
+    },
+    'Yellow Curl Virus': {
+        'name': 'Tomato yellow leaf curl virus',
+        'type': 'viral',
+        'summary': 'Leaves curl upward, become small and yellow at edges. Plants are severely stunted.',
+        'cause': 'Virus spread by whiteflies. Common in warm climates with heavy whitefly pressure.',
+        'effects': ['Severe stunting', 'Flowers drop', 'Little or no fruit'],
+        'stopNow': ['Remove and destroy infected plants', 'Control whiteflies aggressively', 'Use yellow sticky traps'],
+        'preventSpread': ['Remove weeds that host whiteflies', 'Isolate new plants', 'Row covers on seedlings'],
+        'preventFuture': ['Plant resistant varieties', 'Rotate crops', 'Remove crop debris'],
+        'treatments': ['Neem oil', 'Insecticidal soap', 'Imidacloprid'],
+        'seeExpertIf': 'Symptoms appear on most plants — consider replanting with resistant varieties.',
+    },
+}
+
+NO_DETECTION = {
+    'name': 'No clear disease found',
+    'type': 'unclear',
+    'summary': 'The model did not find a strong match in this photo. Try a closer, well-lit picture of a single leaf.',
+    'cause': 'No disease class scored above the confidence threshold.',
+    'effects': ['No confident diagnosis from this image'],
+    'stopNow': ['Retake the photo close-up', 'Use daylight and keep the leaf in focus'],
+    'preventSpread': ['Scout plants every few days', 'Photograph any new spots early'],
+    'preventFuture': ['Water at the base', 'Check undersides for pests weekly'],
+    'treatments': ['Retake the photo with better light'],
+    'seeExpertIf': 'Symptoms remain unclear after a second image.',
+}
+
+MODEL = None
+
+
+def clean_label(raw_label: str) -> str:
+    return LABEL_MAP.get(raw_label, raw_label)
+
+
+def ensure_model_loaded() -> Any:
+    global MODEL
+    if MODEL is None:
+        resolved_path = next((p for p in MODEL_CANDIDATES if os.path.exists(p)), None)
+        if not resolved_path:
+            raise FileNotFoundError(f'Model file was not found at {MODEL_PATH}.')
+
+        custom_objects = {}
+        try:
+            import keras
+            if hasattr(keras, 'Operation'):
+                class TrueDivide(keras.Operation):
+                    def __init__(self, name=None, **kwargs):
+                        super().__init__(name=name)
+                    def call(self, x1, x2):
+                        return keras.ops.true_divide(x1, x2)
+                    def compute_output_spec(self, x1, x2):
+                        return keras.KerasTensor(x1.shape, dtype=x1.dtype)
+
+                class Subtract(keras.Operation):
+                    def __init__(self, name=None, **kwargs):
+                        super().__init__(name=name)
+                    def call(self, x1, x2):
+                        return keras.ops.subtract(x1, x2)
+                    def compute_output_spec(self, x1, x2):
+                        return keras.KerasTensor(x1.shape, dtype=x1.dtype)
+
+                custom_objects['TrueDivide'] = TrueDivide
+                custom_objects['Subtract'] = Subtract
+        except Exception:
+            pass
+
+        MODEL = tf.keras.models.load_model(
+            resolved_path,
+            custom_objects=custom_objects if custom_objects else None,
+            compile=False,
+        )
+    return MODEL
+
+
+def build_result_for_image(image: Image.Image) -> dict[str, Any]:
+    model = ensure_model_loaded()
+
+    # Rule 2: Input images resized to 224x224 pixels (always RGB)
+    resized = image.convert('RGB').resize((224, 224), Image.Resampling.BILINEAR)
+
+    # Converted to a numpy array
+    arr = np.asarray(resized, dtype=np.float32)
+
+    # Ensure 3 channels RGB
+    if arr.ndim == 2:
+        arr = np.stack([arr] * 3, axis=-1)
+    elif arr.shape[-1] == 4:
+        arr = arr[..., :3]
+
+    # Expanded to shape (1, 224, 224, 3)
+    arr = np.expand_dims(arr, axis=0)
+
+    # NOTE: Do NOT call mobilenet_v2.preprocess_input here. The saved model already
+    # contains the rescaling layers (x / 127.5 - 1) right after its augmentation block,
+    # so it expects raw 0-255 pixel values. Applying it twice squashed every image to
+    # near-constant input and biased results toward the blight classes.
+
+    # Rule 3: The 3 Classes probabilities
+    # Index 0: Early Blight, Index 1: Late Blight, Index 2: Healthy
+    raw_predictions = model.predict(arr)
+    if isinstance(raw_predictions, (list, tuple)):
+        raw_predictions = raw_predictions[0]
+    probabilities = np.asarray(raw_predictions).squeeze()
+
+    predicted_index = int(np.argmax(probabilities))
+    raw_class_name = CLASS_NAMES[predicted_index]
+    confidence_score = float(probabilities[predicted_index])
+    confidence_pct = round(confidence_score * 100.0, 2)
+
+    # Rule 4: No Blight Logic
+    # If the prediction evaluates to the 'Healthy' class, override the standard label
+    # and format the final return message to explicitly state:
+    # 'No blight disease detected. The leaf is healthy.'
+    is_healthy = (predicted_index == 2 or raw_class_name == 'Healthy')
+
+    if is_healthy:
+        final_label = 'No blight disease detected. The leaf is healthy.'
+        return_message = 'No blight disease detected. The leaf is healthy.'
+        disease_info = {
+            'name': 'No blight disease detected. The leaf is healthy.',
+            'type': 'healthy',
+            'summary': 'No blight disease detected. The leaf is healthy.',
+            'cause': 'No blight disease detected. The leaf is healthy.',
+            'effects': ['No yield loss expected from this leaf. Healthy photosynthetic tissue.'],
+            'stopNow': ['Nothing to treat right now', 'Scout every 3-4 days'],
+            'preventSpread': ['Wash hands and tools between plots', 'Quarantine new seedlings for a week'],
+            'preventFuture': ['Water at base in the morning', 'Mulch the soil and ensure airflow', 'Check leaves weekly'],
+            'treatments': ['Bio spray (optional)', 'Mulch and airflow'],
+            'seeExpertIf': 'No action required unless symptoms change.',
+        }
+    else:
+        final_label = raw_class_name
+        return_message = f'{raw_class_name} detected.'
+        disease_info = DAMAGE_DB.get(raw_class_name, {
+            'name': raw_class_name,
+            'type': 'fungal',
+            'summary': f'Detected {raw_class_name}. Review recommended treatments and containment steps below.',
+            'cause': 'Fungal pathogen affecting tomato foliage.',
+            'effects': ['Photosynthetic loss', 'Foliage decay'],
+            'stopNow': ['Prune affected foliage', 'Avoid overhead watering'],
+            'preventSpread': ['Disinfect pruning tools', 'Space plants for airflow'],
+            'preventFuture': ['Crop rotation', 'Fungicide schedule'],
+            'treatments': ['Fungicide spray', 'Sanitation'],
+            'seeExpertIf': 'Symptoms spread rapidly across the crop.',
+        })
+
+    all_predictions = [
+        {
+            'class': CLASS_NAMES[i],
+            'label': 'No blight disease detected. The leaf is healthy.' if i == 2 else CLASS_NAMES[i],
+            'confidence': round(float(probabilities[i]) * 100.0, 2),
+            'probability': float(probabilities[i]),
+        }
+        for i in range(len(CLASS_NAMES))
+    ]
+
+    # Rule 5: Same JSON format / variable structure expected by frontend
+    return {
+        'status': 'ok',
+        'label': final_label,
+        'prediction': final_label,
+        'message': return_message,
+        'confidence': confidence_pct,
+        'confidence_score': round(confidence_score, 4),
+        'disease': disease_info,
+        'available': True,
+        'predictions': all_predictions,
+        'class_index': predicted_index,
+        'is_healthy': is_healthy,
+        'probabilities': {
+            CLASS_NAMES[i]: round(float(probabilities[i]), 4) for i in range(len(CLASS_NAMES))
+        },
+    }
+
+
+# ==========================================================
+# PAGE ROUTES
+# ==========================================================
+
+@app.route('/')
+def home():
+    return render_template('home.html', active_page='home')
+
+
+@app.route('/index')
+def index_redirect():
+    return redirect(url_for('home'))
+
+
+@app.route('/scan')
+def scan_page():
+    return render_template('scan.html', active_page='scan')
+
+
+@app.route('/farms')
+def farms_page():
+    return render_template('farms.html', active_page='farms')
+
+
+@app.route('/monitoring')
+def monitoring_page():
+    return render_template('monitoring.html', active_page='monitoring')
+
+
+@app.route('/history')
+def history_page():
+    return render_template('history.html', active_page='history')
+
+
+@app.route('/health')
+def health():
+    return jsonify({
+        'status': 'ok',
+        'model_path': MODEL_PATH,
+        'model_exists': os.path.exists(MODEL_PATH),
+        'db_initialized': True,
+        'python': sys.version.split()[0],
+    })
+
+
+# ==========================================================
+# REST API: AI PREDICTION
+# ==========================================================
+
+@app.route('/api/predict', methods=['POST'])
+def predict():
+    if 'image' not in request.files:
+        return jsonify({'error': 'Please upload a tomato leaf image.'}), 400
+
+    uploaded = request.files['image']
+    if uploaded.filename == '':
+        return jsonify({'error': 'No image file was selected.'}), 400
+
+    allowed = {'.png', '.jpg', '.jpeg', '.webp'}
+    filename = uploaded.filename.lower()
+    ext = os.path.splitext(filename)[1]
+    if not any(filename.endswith(ext_candidate) for ext_candidate in allowed):
+        return jsonify({'error': 'Unsupported image format. Please upload JPG, PNG, or WEBP.'}), 400
+
+    try:
+        image = Image.open(uploaded.stream)
+        image = image.convert('RGB')
+    except UnidentifiedImageError:
+        return jsonify({'error': 'The uploaded file is not a valid image.'}), 400
+    except Exception as exc:  # pragma: no cover - defensive guard
+        return jsonify({'error': 'The image could not be read. Please try a different file.'}), 400
+
+    try:
+        # Run model inference first
+        result = build_result_for_image(image)
+
+        # Save physical leaf image for persistent record
+        if not ext:
+            ext = '.jpg'
+        saved_filename = f"leaf_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}{ext}"
+        saved_filepath = os.path.join(UPLOADS_DIR, saved_filename)
+        os.makedirs(os.path.dirname(saved_filepath), exist_ok=True)
+        image.save(saved_filepath, quality=90)
+
+        # Extract disease details
+        label = result.get('label', 'Healthy Leaf')
+        is_healthy = bool(result.get('is_healthy', False) or result.get('class_index') == 2 or 'healthy' in label.lower())
+        disease_info = result.get('disease', {})
+        disease_name = disease_info.get('name', label)
+        disease_type = disease_info.get('type', 'healthy' if is_healthy else 'fungal')
+        disease_summary = disease_info.get('summary', '')
+        disease_cause = disease_info.get('cause', '')
+
+        # Check for optional farm link
+        raw_farm_id = request.form.get('farm_id')
+        parsed_farm_id = int(raw_farm_id) if raw_farm_id and raw_farm_id.isdigit() else None
+
+        # Save to SQLite database
+        scan_id = db.save_scan(
+            image_filename=saved_filename,
+            prediction_label=label,
+            is_healthy=is_healthy,
+            confidence=result.get('confidence', 0.0),
+            disease_name=disease_name,
+            disease_type=disease_type,
+            disease_summary=disease_summary,
+            disease_cause=disease_cause,
+            raw_data=result,
+            farm_id=parsed_farm_id,
+        )
+
+        result['scan_id'] = scan_id
+        result['image_url'] = f'/static/uploads/{saved_filename}'
+        return jsonify(result)
+
+    except FileNotFoundError as exc:
+        return jsonify({'error': str(exc)}), 500
+    except Exception as exc:
+        return jsonify({'error': 'Prediction failed. Please check the model file and try again.'}), 500
+
+
+# ==========================================================
+# REST API: FARM MANAGEMENT
+# ==========================================================
+
+@app.route('/api/farms', methods=['GET'])
+def api_list_farms():
+    farms = db.list_farms()
+    return jsonify({'status': 'ok', 'farms': farms})
+
+
+@app.route('/api/farms', methods=['POST'])
+def api_create_farm():
+    data = request.get_json(silent=True) or request.form
+    name = (data.get('name') or '').strip()
+    if not name:
+        return jsonify({'error': 'Farm name is required.'}), 400
+
+    location = (data.get('location') or '').strip()
+    size = (data.get('size') or '').strip()
+    variety = (data.get('variety') or '').strip()
+    planting_date = (data.get('planting_date') or '').strip()
+    
+    raw_plants = data.get('plant_count', 0)
+    try:
+        plant_count = max(0, int(raw_plants))
+    except (ValueError, TypeError):
+        plant_count = 0
+
+    notes = (data.get('notes') or '').strip()
+
+    farm_id = db.create_farm(
+        name=name,
+        location=location,
+        size=size,
+        variety=variety,
+        planting_date=planting_date,
+        plant_count=plant_count,
+        notes=notes,
+    )
+    return jsonify({'status': 'ok', 'farm_id': farm_id, 'message': 'Farm created successfully.'}), 201
+
+
+@app.route('/api/farms/<int:farm_id>', methods=['GET'])
+def api_get_farm(farm_id: int):
+    farm = db.get_farm(farm_id)
+    if not farm:
+        return jsonify({'error': 'Farm not found.'}), 404
+    return jsonify({'status': 'ok', 'farm': farm})
+
+
+@app.route('/api/farms/<int:farm_id>', methods=['PUT'])
+def api_update_farm(farm_id: int):
+    data = request.get_json(silent=True) or request.form
+    name = (data.get('name') or '').strip()
+    if not name:
+        return jsonify({'error': 'Farm name is required.'}), 400
+
+    location = (data.get('location') or '').strip()
+    size = (data.get('size') or '').strip()
+    variety = (data.get('variety') or '').strip()
+    planting_date = (data.get('planting_date') or '').strip()
+
+    raw_plants = data.get('plant_count', 0)
+    try:
+        plant_count = max(0, int(raw_plants))
+    except (ValueError, TypeError):
+        plant_count = 0
+
+    notes = (data.get('notes') or '').strip()
+
+    updated = db.update_farm(
+        farm_id=farm_id,
+        name=name,
+        location=location,
+        size=size,
+        variety=variety,
+        planting_date=planting_date,
+        plant_count=plant_count,
+        notes=notes,
+    )
+    if not updated:
+        return jsonify({'error': 'Farm not found or could not be updated.'}), 404
+    return jsonify({'status': 'ok', 'message': 'Farm updated successfully.'})
+
+
+@app.route('/api/farms/<int:farm_id>', methods=['DELETE'])
+def api_delete_farm(farm_id: int):
+    deleted = db.delete_farm(farm_id)
+    if not deleted:
+        return jsonify({'error': 'Farm not found or could not be deleted.'}), 404
+    return jsonify({'status': 'ok', 'message': 'Farm deleted successfully.'})
+
+
+# ==========================================================
+# REST API: SCAN RECORDS & AUDIT HISTORY
+# ==========================================================
+
+@app.route('/api/scans', methods=['GET'])
+def api_list_scans():
+    search = request.args.get('search')
+    status_filter = request.args.get('status')
+    raw_farm_id = request.args.get('farm_id')
+    sort_order = request.args.get('sort', 'newest')
+
+    farm_id = None
+    if raw_farm_id and raw_farm_id.isdigit():
+        farm_id = int(raw_farm_id)
+
+    limit = min(200, max(1, int(request.args.get('limit', 100))))
+    offset = max(0, int(request.args.get('offset', 0)))
+
+    scans = db.list_scans(
+        search=search,
+        status_filter=status_filter,
+        farm_id=farm_id,
+        sort_order=sort_order,
+        limit=limit,
+        offset=offset,
+    )
+    return jsonify({'status': 'ok', 'scans': scans})
+
+
+@app.route('/api/scans/<int:scan_id>', methods=['GET'])
+def api_get_scan(scan_id: int):
+    scan = db.get_scan(scan_id)
+    if not scan:
+        return jsonify({'error': 'Scan record not found.'}), 404
+    return jsonify({'status': 'ok', 'scan': scan})
+
+
+@app.route('/api/scans/<int:scan_id>', methods=['DELETE'])
+def api_delete_scan(scan_id: int):
+    deleted = db.delete_scan(scan_id)
+    if not deleted:
+        return jsonify({'error': 'Scan record not found or could not be deleted.'}), 404
+    return jsonify({'status': 'ok', 'message': 'Scan record deleted successfully.'})
+
+
+# ==========================================================
+# REST API: CROP MONITORING DASHBOARD STATISTICS
+# ==========================================================
+
+@app.route('/api/dashboard/stats', methods=['GET'])
+def api_dashboard_stats():
+    stats = db.get_dashboard_stats()
+    return jsonify({'status': 'ok', 'stats': stats})
+
+
+if __name__ == '__main__':
+    app.run(host='127.0.0.1', port=5000, debug=False)

@@ -1,0 +1,447 @@
+{% extends "base.html" %}
+
+{% block title %}Crop Monitoring Dashboard — Tomato Leaf Scan{% endblock %}
+
+{% block head_extra %}
+<!-- Chart.js for data visualization -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header-wrap">
+  <div class="header-titles">
+    <p class="eyebrow accent">Crop Health Intelligence</p>
+    <h2>Crop Monitoring Dashboard</h2>
+    <p class="lede" style="margin-bottom:0;">
+      Summarized crop health trends and disease frequencies compiled from your verified leaf scans and farm logs.
+    </p>
+  </div>
+  <div class="header-action-btn">
+    <a href="{{ url_for('scan_page') }}" class="primary-btn">
+      <i class="fa-solid fa-camera" style="margin-right:8px;"></i> New Leaf Scan
+    </a>
+  </div>
+</div>
+
+<!-- Monitoring Advisory Notice -->
+<div class="monitoring-notice-banner card">
+  <i class="fa-solid fa-circle-info notice-icon"></i>
+  <div class="notice-text">
+    <strong>Diagnostic Summary Notice:</strong>
+    <span>
+      Statistics below are calculated strictly from your saved inspection records. 
+      This dashboard reflects historical scan samples and does not replace regular manual crop scouting.
+    </span>
+  </div>
+</div>
+
+<!-- Dynamic Contextual Alerts -->
+<div id="alerts-container" class="dashboard-alerts-grid">
+  <!-- Populated dynamically via JS -->
+</div>
+
+<!-- 4 KPI Summary Cards -->
+<section class="kpi-grid">
+  <article class="card kpi-card">
+    <div class="kpi-icon-wrap" style="background:#eaf8ea; color:var(--primary);">
+      <i class="fa-solid fa-tractor"></i>
+    </div>
+    <div class="kpi-content">
+      <span class="meta-label">Total Farms</span>
+      <h3 id="kpi-total-farms" class="kpi-value">—</h3>
+      <a href="{{ url_for('farms_page') }}" class="kpi-link">Manage registered plots &rarr;</a>
+    </div>
+  </article>
+
+  <article class="card kpi-card">
+    <div class="kpi-icon-wrap" style="background:#eef4ff; color:#2361b5;">
+      <i class="fa-solid fa-qrcode"></i>
+    </div>
+    <div class="kpi-content">
+      <span class="meta-label">Total Scans Performed</span>
+      <h3 id="kpi-total-scans" class="kpi-value">—</h3>
+      <a href="{{ url_for('history_page') }}" class="kpi-link">Browse all scan records &rarr;</a>
+    </div>
+  </article>
+
+  <article class="card kpi-card">
+    <div class="kpi-icon-wrap" style="background:#eafaf0; color:#166b42;">
+      <i class="fa-solid fa-circle-check"></i>
+    </div>
+    <div class="kpi-content">
+      <span class="meta-label">Healthy Predictions</span>
+      <div class="kpi-value-row">
+        <h3 id="kpi-healthy-scans" class="kpi-value">—</h3>
+        <span id="kpi-healthy-rate" class="rate-badge rate-healthy">0%</span>
+      </div>
+      <small class="kpi-hint">Scans confirmed symptom-free</small>
+    </div>
+  </article>
+
+  <article class="card kpi-card">
+    <div class="kpi-icon-wrap" style="background:#fff0ee; color:var(--danger);">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+    </div>
+    <div class="kpi-content">
+      <span class="meta-label">Disease Detections</span>
+      <div class="kpi-value-row">
+        <h3 id="kpi-disease-scans" class="kpi-value">—</h3>
+        <span id="kpi-disease-rate" class="rate-badge rate-danger">0%</span>
+      </div>
+      <small class="kpi-hint">Pathogens or pest detections</small>
+    </div>
+  </article>
+</section>
+
+<!-- Visual Analytics & Charts Section -->
+<section class="dashboard-charts-container">
+  <!-- Chart Empty State (shown if 0 scans) -->
+  <div id="charts-empty-state" class="card empty-state-card hidden">
+    <div class="empty-icon-wrap">
+      <i class="fa-solid fa-chart-pie"></i>
+    </div>
+    <h3>No scan data available yet</h3>
+    <p>
+      Begin by inspecting your first tomato leaf. Once scans are recorded, interactive disease frequency charts and timeline trends will generate automatically.
+    </p>
+    <a href="{{ url_for('scan_page') }}" class="primary-btn">
+      <i class="fa-solid fa-camera" style="margin-right:8px;"></i> Scan First Leaf
+    </a>
+  </div>
+
+  <div id="charts-wrapper" class="charts-grid">
+    <!-- Health Distribution Doughnut -->
+    <div class="card chart-card">
+      <div class="chart-header">
+        <div>
+          <p class="eyebrow accent">Diagnosis Ratio</p>
+          <h4>Crop Health Distribution</h4>
+        </div>
+      </div>
+      <div class="chart-body doughnut-body">
+        <canvas id="healthDistributionChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Disease Frequency Bar Chart -->
+    <div class="card chart-card">
+      <div class="chart-header">
+        <div>
+          <p class="eyebrow accent">Prevalence Ranking</p>
+          <h4>Top Detected Diseases</h4>
+        </div>
+      </div>
+      <div class="chart-body">
+        <canvas id="diseaseFrequencyChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Activity Timeline Chart -->
+    <div class="card chart-card full-width-chart">
+      <div class="chart-header">
+        <div>
+          <p class="eyebrow accent">Inspection Volume</p>
+          <h4>Scan Activity Over Time</h4>
+        </div>
+      </div>
+      <div class="chart-body timeline-body">
+        <canvas id="activityTimelineChart"></canvas>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Recent Field Activity -->
+<section class="recent-activity-section">
+  <div class="section-header" style="margin-bottom:18px;">
+    <div>
+      <p class="eyebrow accent">Audit Trail</p>
+      <h3>Recent Scan Inspections</h3>
+    </div>
+    <a href="{{ url_for('history_page') }}" class="ghost-btn small-btn">
+      View All in History <i class="fa-solid fa-arrow-right"></i>
+    </a>
+  </div>
+
+  <div class="card recent-table-card">
+    <div class="table-responsive">
+      <table class="data-table" id="recent-scans-table">
+        <thead>
+          <tr>
+            <th>Leaf Photo</th>
+            <th>Diagnosed Condition</th>
+            <th>Confidence</th>
+            <th>Farm Plot</th>
+            <th>Date & Time</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="recent-scans-tbody">
+          <tr>
+            <td colspan="6" class="text-center" style="padding:30px; color:var(--muted);">
+              Loading recent field scans...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let healthChart = null;
+  let diseaseChart = null;
+  let timelineChart = null;
+
+  async function loadDashboard() {
+    try {
+      const res = await fetch('/api/dashboard/stats');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to fetch dashboard metrics');
+      
+      const stats = data.stats;
+      renderKPIs(stats);
+      renderAlerts(stats.alerts);
+      renderCharts(stats);
+      renderRecentScans(stats.recent_scans);
+    } catch (err) {
+      console.error(err);
+      showToast('Error loading dashboard: ' + err.message, 'error');
+    }
+  }
+
+  function renderKPIs(stats) {
+    document.getElementById('kpi-total-farms').textContent = stats.total_farms.toLocaleString();
+    document.getElementById('kpi-total-scans').textContent = stats.total_scans.toLocaleString();
+    document.getElementById('kpi-healthy-scans').textContent = stats.healthy_scans.toLocaleString();
+    document.getElementById('kpi-disease-scans').textContent = stats.disease_scans.toLocaleString();
+
+    document.getElementById('kpi-healthy-rate').textContent = `${stats.healthy_percentage}%`;
+    document.getElementById('kpi-disease-rate').textContent = `${stats.disease_percentage}%`;
+  }
+
+  function renderAlerts(alerts) {
+    const container = document.getElementById('alerts-container');
+    if (!alerts || alerts.length === 0) {
+      container.innerHTML = '';
+      return;
+    }
+
+    container.innerHTML = alerts.map(alert => {
+      let icon = 'fa-circle-info';
+      let borderClass = 'alert-info';
+      if (alert.level === 'warning') {
+        icon = 'fa-triangle-exclamation';
+        borderClass = 'alert-warning';
+      } else if (alert.level === 'success') {
+        icon = 'fa-circle-check';
+        borderClass = 'alert-success';
+      }
+
+      return `
+        <div class="card dashboard-alert-card ${borderClass}">
+          <div class="alert-icon-wrap">
+            <i class="fa-solid ${icon}"></i>
+          </div>
+          <div class="alert-content">
+            <strong>${escapeHtml(alert.title)}</strong>
+            <p>${escapeHtml(alert.message)}</p>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderCharts(stats) {
+    const emptyState = document.getElementById('charts-empty-state');
+    const wrapper = document.getElementById('charts-wrapper');
+
+    if (stats.total_scans === 0) {
+      emptyState.classList.remove('hidden');
+      wrapper.classList.add('hidden');
+      return;
+    }
+
+    emptyState.classList.add('hidden');
+    wrapper.classList.remove('hidden');
+
+    // Chart.js global defaults
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    Chart.defaults.color = '#5d6f65';
+
+    // 1. Health Distribution Doughnut
+    const ctxHealth = document.getElementById('healthDistributionChart').getContext('2d');
+    if (healthChart) healthChart.destroy();
+    healthChart = new Chart(ctxHealth, {
+      type: 'doughnut',
+      data: {
+        labels: ['Healthy', 'Disease-Positive', 'Unclear / Low Match'],
+        datasets: [{
+          data: [stats.healthy_scans, stats.disease_scans, stats.unclear_scans],
+          backgroundColor: ['#1d7b43', '#b35337', '#e6a834'],
+          borderWidth: 2,
+          borderColor: '#ffffff',
+          hoverOffset: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 14, padding: 16 } }
+        },
+        cutout: '68%'
+      }
+    });
+
+    // 2. Disease Frequency Bar Chart
+    const ctxDisease = document.getElementById('diseaseFrequencyChart').getContext('2d');
+    if (diseaseChart) diseaseChart.destroy();
+    
+    const diseaseLabels = stats.top_diseases.length > 0 
+      ? stats.top_diseases.map(d => d.disease_name) 
+      : ['No diseases detected'];
+    const diseaseData = stats.top_diseases.length > 0 
+      ? stats.top_diseases.map(d => d.count) 
+      : [0];
+
+    diseaseChart = new Chart(ctxDisease, {
+      type: 'bar',
+      data: {
+        labels: diseaseLabels,
+        datasets: [{
+          label: 'Detections',
+          data: diseaseData,
+          backgroundColor: '#2361b5',
+          borderRadius: 8
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, ticks: { precision: 0 } },
+          x: { ticks: { autoSkip: false, maxRotation: 25, minRotation: 0 } }
+        }
+      }
+    });
+
+    // 3. Activity Timeline Chart
+    const ctxTimeline = document.getElementById('activityTimelineChart').getContext('2d');
+    if (timelineChart) timelineChart.destroy();
+
+    const timelineLabels = stats.timeline.map(t => t.scan_date);
+    const totalData = stats.timeline.map(t => t.total);
+    const healthyData = stats.timeline.map(t => t.healthy);
+    const diseaseTimelineData = stats.timeline.map(t => t.disease);
+
+    timelineChart = new Chart(ctxTimeline, {
+      type: 'line',
+      data: {
+        labels: timelineLabels,
+        datasets: [
+          {
+            label: 'Total Scans',
+            data: totalData,
+            borderColor: '#173a2d',
+            backgroundColor: 'rgba(23, 58, 45, 0.08)',
+            fill: true,
+            tension: 0.3,
+            borderWidth: 2
+          },
+          {
+            label: 'Healthy Scans',
+            data: healthyData,
+            borderColor: '#1d7b43',
+            tension: 0.3,
+            borderWidth: 2
+          },
+          {
+            label: 'Disease Detections',
+            data: diseaseTimelineData,
+            borderColor: '#b35337',
+            tension: 0.3,
+            borderWidth: 2
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'top' } },
+        scales: {
+          y: { beginAtZero: true, ticks: { precision: 0 } }
+        }
+      }
+    });
+  }
+
+  function renderRecentScans(recentScans) {
+    const tbody = document.getElementById('recent-scans-tbody');
+    if (!recentScans || recentScans.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" class="text-center" style="padding:32px; color:var(--muted);">
+            No recent scans recorded. <a href="/scan" style="color:var(--primary); font-weight:600;">Scan a leaf now</a> to populate activity.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = recentScans.map(s => {
+      const isHealthy = s.is_healthy === 1;
+      const isUnclear = s.prediction_label === 'No clear disease found';
+      let badgeClass = 'badge-disease';
+      if (isHealthy) badgeClass = 'badge-healthy';
+      if (isUnclear) badgeClass = 'badge-unclear';
+
+      const thumbUrl = `/static/uploads/${encodeURIComponent(s.image_filename)}`;
+      const conf = Math.round(s.confidence || 0);
+
+      return `
+        <tr>
+          <td>
+            <img src="${thumbUrl}" alt="Leaf Scan" class="table-thumb" onerror="this.src='/static/images/hero-tomato.jpg'" />
+          </td>
+          <td>
+            <div style="font-weight:700;">${escapeHtml(s.disease_name || s.prediction_label)}</div>
+            <span class="pill-badge ${badgeClass}" style="margin-top:4px;">
+              ${isHealthy ? 'Healthy Leaf' : (isUnclear ? 'Unclear Image' : 'Disease Detected')}
+            </span>
+          </td>
+          <td>
+            <strong>${conf}%</strong>
+          </td>
+          <td>
+            <span style="color:var(--muted);"><i class="fa-solid fa-tractor" style="font-size:0.8rem;"></i> ${escapeHtml(s.farm_name || 'General')}</span>
+          </td>
+          <td>
+            <small style="color:var(--muted);">${escapeHtml(s.created_at || 'Recent')}</small>
+          </td>
+          <td>
+            <a href="/history?scan_id=${s.id}" class="secondary-btn small-btn">
+              <i class="fa-solid fa-eye"></i> Details
+            </a>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function escapeHtml(text) {
+    if (!text) return '';
+    return String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  document.addEventListener('DOMContentLoaded', loadDashboard);
+</script>
+{% endblock %}

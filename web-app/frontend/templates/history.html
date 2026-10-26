@@ -1,0 +1,474 @@
+{% extends "base.html" %}
+
+{% block title %}Scan Diagnostic History — Tomato Leaf Scan{% endblock %}
+
+{% block content %}
+<div class="page-header-wrap">
+  <div class="header-titles">
+    <p class="eyebrow accent">Inspection Archives</p>
+    <h2>Scan Diagnostic History</h2>
+    <p class="lede" style="margin-bottom:0;">
+      Browse, search, and review all previous tomato leaf scans, confidence metrics, and containment guidance.
+    </p>
+  </div>
+  <div class="header-action-btn">
+    <a href="{{ url_for('scan_page') }}" class="primary-btn">
+      <i class="fa-solid fa-camera" style="margin-right:8px;"></i> New Leaf Scan
+    </a>
+  </div>
+</div>
+
+<!-- Search & Filter Controls Toolbar -->
+<section class="card filter-toolbar-card">
+  <div class="filter-controls-grid">
+    <!-- Search Input -->
+    <div class="filter-group search-filter-group">
+      <label for="search-input" class="filter-label">Search Records</label>
+      <div class="search-input-wrap">
+        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+        <input type="text" id="search-input" class="form-control search-field" placeholder="Search disease or farm..." />
+      </div>
+    </div>
+
+    <!-- Status Filter -->
+    <div class="filter-group">
+      <label for="status-filter" class="filter-label">Diagnosis Status</label>
+      <select id="status-filter" class="form-control">
+        <option value="">All Diagnoses</option>
+        <option value="healthy">Healthy Only</option>
+        <option value="disease">Disease Detections Only</option>
+        <option value="unclear">Unclear / Low Confidence</option>
+      </select>
+    </div>
+
+    <!-- Farm Filter -->
+    <div class="filter-group">
+      <label for="farm-filter" class="filter-label">Filter by Farm</label>
+      <select id="farm-filter" class="form-control">
+        <option value="">All Farms</option>
+        <!-- Injected via JS -->
+      </select>
+    </div>
+
+    <!-- Sort Order -->
+    <div class="filter-group">
+      <label for="sort-filter" class="filter-label">Sort By</label>
+      <select id="sort-filter" class="form-control">
+        <option value="newest">Newest Scans First</option>
+        <option value="oldest">Oldest Scans First</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="filter-summary-row">
+    <div id="results-count-text" class="results-count-text">
+      Loading scan records...
+    </div>
+    <button type="button" id="reset-filters-btn" class="ghost-btn small-btn">
+      <i class="fa-solid fa-rotate-left"></i> Reset Filters
+    </button>
+  </div>
+</section>
+
+<!-- Scans Grid -->
+<section id="scans-container" class="history-grid">
+  <!-- Dynamically injected via JS -->
+</section>
+
+<!-- Empty State -->
+<div id="history-empty-state" class="card empty-state-card hidden">
+  <div class="empty-icon-wrap">
+    <i class="fa-solid fa-clock-rotate-left"></i>
+  </div>
+  <h3>No scan records found</h3>
+  <p id="empty-state-msg">
+    You haven't recorded any leaf scans yet. Use our AI scanner to photograph a tomato leaf and your diagnostic history will appear here.
+  </p>
+  <a href="{{ url_for('scan_page') }}" class="primary-btn">
+    <i class="fa-solid fa-camera" style="margin-right:8px;"></i> Scan a Tomato Leaf
+  </a>
+</div>
+
+<!-- Scan Detail Modal -->
+<div id="scan-detail-modal" class="modal-backdrop hidden" aria-hidden="true">
+  <div class="modal-card card detail-modal-card" role="dialog" aria-labelledby="detail-title">
+    <div class="modal-header">
+      <div>
+        <p class="eyebrow accent" id="detail-eyebrow">Diagnostic Report</p>
+        <h3 id="detail-title">Leaf Diagnosis</h3>
+      </div>
+      <button type="button" class="modal-close-btn" id="detail-close-btn" aria-label="Close dialog">&times;</button>
+    </div>
+
+    <div class="detail-modal-body">
+      <div class="detail-grid">
+        <div class="detail-image-wrap">
+          <img id="detail-image" alt="Diagnosed tomato leaf" class="detail-main-img" />
+          <div class="detail-meta-pill" id="detail-meta-pill">
+            <span id="detail-status-badge" class="pill-badge">Healthy</span>
+            <span id="detail-confidence-badge" class="confidence-badge">Confidence: 0%</span>
+          </div>
+        </div>
+
+        <div class="detail-info-wrap">
+          <div class="detail-meta-row">
+            <div>
+              <span class="meta-label">Associated Farm</span>
+              <strong id="detail-farm-name">—</strong>
+            </div>
+            <div>
+              <span class="meta-label">Date Inspected</span>
+              <strong id="detail-date">—</strong>
+            </div>
+            <div>
+              <span class="meta-label">Pathogen Type</span>
+              <strong id="detail-type">—</strong>
+            </div>
+          </div>
+
+          <div class="detail-section">
+            <h5>Diagnosis Summary</h5>
+            <p id="detail-summary" style="color:var(--muted); line-height:1.6;"></p>
+          </div>
+
+          <div class="detail-section" id="detail-cause-box">
+            <h5>Underlying Cause</h5>
+            <p id="detail-cause" style="color:var(--muted); line-height:1.6;"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actionable Advice & Guidance -->
+      <div class="detail-advice-section">
+        <div class="card detail-advice-card" style="background:#f4faf4;">
+          <h5><i class="fa-solid fa-hand-holding-hand" style="color:var(--primary); margin-right:6px;"></i> Immediate Steps</h5>
+          <ul id="detail-stop-now"></ul>
+        </div>
+
+        <div class="detail-advice-grid-row">
+          <div class="card detail-advice-card">
+            <h5><i class="fa-solid fa-shield" style="color:var(--primary); margin-right:6px;"></i> Prevention</h5>
+            <ul id="detail-prevent-future"></ul>
+          </div>
+          <div class="card detail-advice-card">
+            <h5><i class="fa-solid fa-arrows-split-up-and-left" style="color:#d97706; margin-right:6px;"></i> Spread Control</h5>
+            <ul id="detail-prevent-spread"></ul>
+          </div>
+          <div class="card detail-advice-card">
+            <h5><i class="fa-solid fa-prescription-bottle-medical" style="color:#2563eb; margin-right:6px;"></i> Treatments</h5>
+            <ul id="detail-treatments"></ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions" style="justify-content:space-between; margin-top:20px;">
+      <button type="button" class="danger-btn small-btn" id="detail-delete-btn">
+        <i class="fa-solid fa-trash-can" style="margin-right:6px;"></i> Delete Record
+      </button>
+      <button type="button" class="ghost-btn" id="detail-done-btn">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Scan Confirmation Modal -->
+<div id="delete-scan-modal" class="modal-backdrop hidden" aria-hidden="true">
+  <div class="modal-card card delete-confirm-card" role="dialog" aria-labelledby="delete-scan-title">
+    <div class="modal-header">
+      <h3 id="delete-scan-title" style="color:var(--danger);">
+        <i class="fa-solid fa-triangle-exclamation" style="margin-right:8px;"></i>Delete Scan Record
+      </h3>
+      <button type="button" class="modal-close-btn" id="delete-scan-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p>Are you sure you want to permanently delete this scan record?</p>
+      <p class="modal-note" style="color:var(--muted); font-size:0.9rem;">
+        The diagnosis details and stored leaf image file will be safely removed from system storage.
+      </p>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="ghost-btn" id="delete-scan-cancel">Cancel</button>
+      <button type="button" class="danger-btn" id="delete-scan-confirm">Delete Record</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let scansList = [];
+  let currentScanIdToDelete = null;
+  let currentActiveScan = null;
+
+  async function loadFarmsFilter() {
+    try {
+      const res = await fetch('/api/farms');
+      const data = await res.json();
+      if (!res.ok) return;
+      const farmSelect = document.getElementById('farm-filter');
+      const currentVal = farmSelect.value;
+      farmSelect.innerHTML = '<option value="">All Farms</option>' + (data.farms || []).map(f => {
+        return `<option value="${f.id}">${escapeHtml(f.name)}</option>`;
+      }).join('');
+      
+      // Check URL search params for preselected farm
+      const params = new URLSearchParams(window.location.search);
+      const urlFarmId = params.get('farm_id');
+      if (urlFarmId) {
+        farmSelect.value = urlFarmId;
+      } else if (currentVal) {
+        farmSelect.value = currentVal;
+      }
+    } catch (e) {
+      console.warn('Could not load farm filter options', e);
+    }
+  }
+
+  async function loadScans() {
+    const search = document.getElementById('search-input').value;
+    const status = document.getElementById('status-filter').value;
+    const farmId = document.getElementById('farm-filter').value;
+    const sort = document.getElementById('sort-filter').value;
+
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    if (status) params.append('status', status);
+    if (farmId) params.append('farm_id', farmId);
+    if (sort) params.append('sort', sort);
+
+    try {
+      const res = await fetch(`/api/scans?${params.toString()}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to fetch scans');
+
+      scansList = data.scans || [];
+      renderScans();
+
+      // Check URL for deep-linked scan_id
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlScanId = urlParams.get('scan_id');
+      if (urlScanId) {
+        openScanDetail(parseInt(urlScanId, 10));
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Error loading scan history: ' + err.message, 'error');
+    }
+  }
+
+  function renderScans() {
+    const container = document.getElementById('scans-container');
+    const emptyState = document.getElementById('history-empty-state');
+    const countText = document.getElementById('results-count-text');
+
+    countText.textContent = `Showing ${scansList.length} recorded scan${scansList.length === 1 ? '' : 's'}`;
+
+    if (scansList.length === 0) {
+      container.innerHTML = '';
+      emptyState.classList.remove('hidden');
+      const hasFilter = document.getElementById('search-input').value || 
+                        document.getElementById('status-filter').value || 
+                        document.getElementById('farm-filter').value;
+      document.getElementById('empty-state-msg').textContent = hasFilter
+        ? 'No scans match your current filter criteria. Try clearing search or filter selections.'
+        : 'You haven\'t recorded any leaf scans yet. Use our AI scanner to photograph a tomato leaf and your diagnostic history will appear here.';
+      return;
+    }
+
+    emptyState.classList.add('hidden');
+    container.innerHTML = scansList.map(scan => {
+      const isHealthy = scan.is_healthy === 1;
+      const isUnclear = scan.prediction_label === 'No clear disease found';
+      let badgeClass = 'badge-disease';
+      let statusLabel = 'Disease Detected';
+      if (isHealthy) {
+        badgeClass = 'badge-healthy';
+        statusLabel = 'Healthy Leaf';
+      } else if (isUnclear) {
+        badgeClass = 'badge-unclear';
+        statusLabel = 'Unclear Match';
+      }
+
+      const conf = Math.round(scan.confidence || 0);
+      const thumbUrl = `/static/uploads/${encodeURIComponent(scan.image_filename)}`;
+      const farmName = scan.farm_name || 'General / Unassigned';
+      const scanDate = scan.created_at || 'Recent';
+      const summary = scan.disease_summary || 'No summary recorded.';
+
+      return `
+        <article class="card history-card" id="scan-card-${scan.id}">
+          <div class="history-img-wrap">
+            <img src="${thumbUrl}" alt="Leaf Scan" class="history-img" onerror="this.src='/static/images/hero-tomato.jpg'" />
+            <div class="history-badge-overlay">
+              <span class="pill-badge ${badgeClass}">${statusLabel}</span>
+              <span class="conf-pill">${conf}% Conf.</span>
+            </div>
+          </div>
+
+          <div class="history-card-body">
+            <div class="history-title-row">
+              <h4 class="history-disease-title">${escapeHtml(scan.disease_name || scan.prediction_label)}</h4>
+            </div>
+
+            <div class="history-meta-row">
+              <span class="history-meta-item">
+                <i class="fa-solid fa-tractor"></i> ${escapeHtml(farmName)}
+              </span>
+              <span class="history-meta-item">
+                <i class="fa-regular fa-calendar"></i> ${escapeHtml(scanDate)}
+              </span>
+            </div>
+
+            <p class="history-summary">${escapeHtml(summary)}</p>
+
+            <div class="history-card-actions">
+              <button type="button" class="primary-btn small-btn" onclick="openScanDetail(${scan.id})">
+                <i class="fa-solid fa-file-waveform"></i> View Details
+              </button>
+              <button type="button" class="ghost-btn icon-btn danger-icon-btn" onclick="openDeleteScan(${scan.id})" aria-label="Delete scan">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
+          </div>
+        </article>
+      `;
+    }).join('');
+  }
+
+  // Detail Modal Logic
+  const detailModal = document.getElementById('scan-detail-modal');
+
+  function openScanDetail(scanId) {
+    const scan = scansList.find(s => s.id === scanId);
+    if (!scan) return;
+    currentActiveScan = scan;
+
+    const isHealthy = scan.is_healthy === 1;
+    const isUnclear = scan.prediction_label === 'No clear disease found';
+    
+    document.getElementById('detail-title').textContent = scan.disease_name || scan.prediction_label;
+    document.getElementById('detail-image').src = `/static/uploads/${encodeURIComponent(scan.image_filename)}`;
+    document.getElementById('detail-farm-name').textContent = scan.farm_name || 'General / Unassigned';
+    document.getElementById('detail-date').textContent = scan.created_at || 'Recent';
+    document.getElementById('detail-type').textContent = (scan.disease_type || 'Unknown').toUpperCase();
+    document.getElementById('detail-summary').textContent = scan.disease_summary || 'No summary available.';
+    document.getElementById('detail-cause').textContent = scan.disease_cause || 'No cause documented.';
+
+    const statusBadge = document.getElementById('detail-status-badge');
+    statusBadge.className = `pill-badge ${isHealthy ? 'badge-healthy' : (isUnclear ? 'badge-unclear' : 'badge-disease')}`;
+    statusBadge.textContent = isHealthy ? 'Healthy Leaf' : (isUnclear ? 'Unclear Diagnosis' : 'Disease Detected');
+
+    document.getElementById('detail-confidence-badge').textContent = `Confidence: ${Math.round(scan.confidence || 0)}%`;
+
+    // Populate lists from raw_json
+    const raw = scan.raw_json || {};
+    const disease = raw.disease || {};
+
+    renderList('detail-stop-now', disease.stopNow || ['No immediate actions required.']);
+    renderList('detail-prevent-future', disease.preventFuture || ['Regular scouting recommended.']);
+    renderList('detail-prevent-spread', disease.preventSpread || ['Keep tools clean.']);
+    renderList('detail-treatments', disease.treatments || ['No treatment guidance available.']);
+
+    detailModal.classList.remove('hidden');
+  }
+
+  function renderList(targetId, items) {
+    const el = document.getElementById(targetId);
+    if (!el) return;
+    el.innerHTML = '';
+    (items || []).forEach(item => {
+      const li = document.createElement('li');
+      li.textContent = item;
+      el.appendChild(li);
+    });
+  }
+
+  function closeDetailModal() {
+    detailModal.classList.add('hidden');
+    currentActiveScan = null;
+  }
+
+  document.getElementById('detail-close-btn').addEventListener('click', closeDetailModal);
+  document.getElementById('detail-done-btn').addEventListener('click', closeDetailModal);
+
+  document.getElementById('detail-delete-btn').addEventListener('click', () => {
+    if (currentActiveScan) {
+      const id = currentActiveScan.id;
+      closeDetailModal();
+      openDeleteScan(id);
+    }
+  });
+
+  // Delete Scan Modal Logic
+  const deleteScanModal = document.getElementById('delete-scan-modal');
+
+  function openDeleteScan(scanId) {
+    currentScanIdToDelete = scanId;
+    deleteScanModal.classList.remove('hidden');
+  }
+
+  function closeDeleteScanModal() {
+    deleteScanModal.classList.add('hidden');
+    currentScanIdToDelete = null;
+  }
+
+  document.getElementById('delete-scan-close').addEventListener('click', closeDeleteScanModal);
+  document.getElementById('delete-scan-cancel').addEventListener('click', closeDeleteScanModal);
+
+  document.getElementById('delete-scan-confirm').addEventListener('click', async () => {
+    if (!currentScanIdToDelete) return;
+    const btn = document.getElementById('delete-scan-confirm');
+    btn.disabled = true;
+    btn.textContent = 'Deleting...';
+
+    try {
+      const res = await fetch(`/api/scans/${currentScanIdToDelete}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to delete scan');
+
+      closeDeleteScanModal();
+      showToast('Scan record deleted successfully', 'success');
+      await loadScans();
+    } catch (err) {
+      console.error(err);
+      showToast(err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Delete Record';
+    }
+  });
+
+  // Filter & Search Events
+  let searchTimeout = null;
+  document.getElementById('search-input').addEventListener('input', () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(loadScans, 300);
+  });
+  document.getElementById('status-filter').addEventListener('change', loadScans);
+  document.getElementById('farm-filter').addEventListener('change', loadScans);
+  document.getElementById('sort-filter').addEventListener('change', loadScans);
+
+  document.getElementById('reset-filters-btn').addEventListener('click', () => {
+    document.getElementById('search-input').value = '';
+    document.getElementById('status-filter').value = '';
+    document.getElementById('farm-filter').value = '';
+    document.getElementById('sort-filter').value = 'newest';
+    loadScans();
+  });
+
+  function escapeHtml(text) {
+    if (!text) return '';
+    return String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    await loadFarmsFilter();
+    await loadScans();
+  });
+</script>
+{% endblock %}

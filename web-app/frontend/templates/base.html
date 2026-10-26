@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Tomato Leaf Scan — AI Crop Health Platform{% endblock %}</title>
+  <meta name="description"
+    content="Tomato Leaf Scan uses a local AI disease-detection model to inspect tomato leaves, track farm plots, monitor crop health, and maintain inspection history." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+  <script src="https://kit.fontawesome.com/7279994a6e.js" crossorigin="anonymous"></script>
+  {% block head_extra %}{% endblock %}
+</head>
+
+<body>
+  <div class="page-shell">
+    <header class="topbar">
+      <a href="{{ url_for('home') }}" class="brand-link" style="text-decoration:none; color:inherit;">
+        <div class="brand-wrap">
+          <div class="brand-mark">T</div>
+          <div>
+            <p class="eyebrow">AI Crop Health</p>
+            <h1 class="brand-title">Tomato Leaf Scan</h1>
+          </div>
+        </div>
+      </a>
+
+      <button class="mobile-nav-toggle" id="mobile-nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+
+      <nav class="nav-links" id="main-nav" aria-label="Main navigation">
+        <a href="{{ url_for('home') }}" class="{% if active_page == 'home' %}active{% endif %}">
+          <i class="fa-solid fa-house nav-icon"></i> Home
+        </a>
+        <a href="{{ url_for('farms_page') }}" class="{% if active_page == 'farms' %}active{% endif %}">
+          <i class="fa-solid fa-tractor nav-icon"></i> Tomato Farm
+        </a>
+        <a href="{{ url_for('monitoring_page') }}" class="{% if active_page == 'monitoring' %}active{% endif %}">
+          <i class="fa-solid fa-chart-line nav-icon"></i> Crop Monitoring
+        </a>
+        <a href="{{ url_for('history_page') }}" class="{% if active_page == 'history' %}active{% endif %}">
+          <i class="fa-solid fa-clock-rotate-left nav-icon"></i> Scan History
+        </a>
+        <a href="{{ url_for('scan_page') }}" class="nav-cta-btn {% if active_page == 'scan' %}active{% endif %}">
+          <i class="fa-solid fa-leaf nav-icon"></i> Scan Leaf
+        </a>
+      </nav>
+    </header>
+
+    <main>
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer card">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="brand-wrap">
+            <div class="brand-mark">T</div>
+            <div>
+              <p class="eyebrow">AI Crop Health</p>
+              <strong>Tomato Leaf Scan</strong>
+            </div>
+          </div>
+          <p class="footer-desc">
+            Early disease detection and farm crop management platform for tomato growers.
+            Powered by on-device computer vision and agronomic treatment guidance.
+          </p>
+        </div>
+
+        <div class="footer-links-col">
+          <h5>Navigation</h5>
+          <ul>
+            <li><a href="{{ url_for('home') }}">Home Overview</a></li>
+            <li><a href="{{ url_for('scan_page') }}">AI Leaf Scanner</a></li>
+            <li><a href="{{ url_for('farms_page') }}">Tomato Farm Manager</a></li>
+            <li><a href="{{ url_for('monitoring_page') }}">Crop Monitoring Dashboard</a></li>
+            <li><a href="{{ url_for('history_page') }}">Scan Diagnostic History</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-col">
+          <h5>Advisory Notice</h5>
+          <p class="footer-notice">
+            Diagnoses are calculated using machine learning inference from uploaded images.
+            Always cross-verify with on-field inspections and local agricultural extension officers for critical crop
+            interventions.
+          </p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>© 2026 Tomato Leaf Scan. Built with Flask & TensorFlow Lite.</p>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Notification Toast Container -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <script>
+    // Global mobile navigation toggle
+    const navToggle = document.getElementById('mobile-nav-toggle');
+    const mainNav = document.getElementById('main-nav');
+    if (navToggle && mainNav) {
+      navToggle.addEventListener('click', () => {
+        const isOpen = mainNav.classList.toggle('nav-open');
+        navToggle.setAttribute('aria-expanded', isOpen);
+        navToggle.innerHTML = isOpen ? '<i class="fa-solid fa-xmark"></i>' : '<i class="fa-solid fa-bars"></i>';
+      });
+    }
+
+    // Universal toast notification helper
+    function showToast(message, type = 'info', duration = 3500) {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.innerHTML = `<span>${message}</span><button type="button" class="toast-close" onclick="this.parentElement.remove()">&times;</button>`;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.classList.add('toast-fade');
+        setTimeout(() => toast.remove(), 300);
+      }, duration);
+    }
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+
+</html>

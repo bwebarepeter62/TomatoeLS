@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}AI Leaf Scanner — Tomato Leaf Scan{% endblock %}
+
+{% block content %}
+<section class="card scan-panel">
+  <div class="panel-header">
+    <div>
+      <p class="eyebrow accent">On-Device Leaf Inspection</p>
+      <h2>Scan or upload a tomato leaf image</h2>
+      <p class="panel-subtext" style="color:var(--muted); margin-bottom:0;">
+        Upload a clear photograph of a tomato leaf. The AI model will classify whether it is healthy or detect any disease symptoms.
+      </p>
+    </div>
+  </div>
+
+  <form id="scan-form" class="upload-form" enctype="multipart/form-data">
+    <!-- Optional Farm Association Selector -->
+    <div class="form-group farm-select-group">
+      <label for="farm-select" class="form-label">
+        <i class="fa-solid fa-tractor" style="color:var(--primary); margin-right:6px;"></i>
+        Associate Scan with Farm Plot (Optional):
+      </label>
+      <select id="farm-select" name="farm_id" class="form-control">
+        <option value="">General / Unassigned Farm</option>
+        <!-- Populated via JavaScript -->
+      </select>
+      <small class="form-help">Assigning to a farm helps you filter trends in Crop Monitoring and Scan History.</small>
+    </div>
+
+    <div class="upload-box" id="upload-box">
+      <input id="image-input" type="file" accept="image/png, image/jpeg, image/webp" />
+      <label for="image-input" class="upload-label">
+        <span class="upload-emoji"><i class="fa-regular fa-images"></i></span>
+        <strong>Choose a tomato leaf image</strong>
+        <small>PNG, JPG, or WEBP (Max 15MB)</small>
+      </label>
+    </div>
+
+    <div id="preview-panel" class="preview-panel hidden" aria-live="polite">
+      <img id="preview-image" alt="Selected plant leaf preview" />
+      <button type="button" id="remove-image" class="ghost-btn">
+        <i class="fa-solid fa-trash-can" style="margin-right:6px;"></i> Remove image
+      </button>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" id="analyze-btn" class="primary-btn large-btn">
+        <i class="fa-solid fa-magnifying-glass" style="margin-right:8px;"></i> Scan leaf
+      </button>
+    </div>
+  </form>
+
+  <div id="status-box" class="status-box neutral" aria-live="polite">
+    No image selected yet. Please choose a tomato leaf photo to begin.
+  </div>
+</section>
+
+<section id="results" class="results-panel hidden" aria-live="polite">
+  <div class="results-header">
+    <div>
+      <p class="eyebrow accent">Diagnosis result</p>
+      <h3 id="result-title">Scan complete</h3>
+    </div>
+    <div class="results-header-actions" style="display:flex; gap:10px; flex-wrap:wrap;">
+      <a href="{{ url_for('history_page') }}" class="ghost-btn" id="view-in-history-btn">
+        <i class="fa-solid fa-clock-rotate-left" style="margin-right:6px;"></i> View in Scan History
+      </a>
+      <button type="button" id="new-scan" class="secondary-btn">
+        <i class="fa-solid fa-camera-rotate" style="margin-right:6px;"></i> Scan another leaf
+      </button>
+    </div>
+  </div>
+
+  <div class="result-layout">
+    <div class="result-image-wrap card">
+      <img id="result-image" alt="Leaf result image" />
+    </div>
+
+    <div class="result-content card">
+      <div class="confidence-row">
+        <span class="confidence-label">Prediction confidence</span>
+        <strong id="confidence-value">0%</strong>
+      </div>
+
+      <h4 id="disease-name">Healthy leaf</h4>
+      <p id="disease-summary" class="result-summary"></p>
+
+      <div class="meta-grid">
+        <div>
+          <span class="meta-label">Classification Type</span>
+          <strong id="disease-type">Healthy</strong>
+        </div>
+        <div>
+          <span class="meta-label">Pathogen / Cause</span>
+          <strong id="disease-cause">—</strong>
+        </div>
+      </div>
+
+      <div class="tips-box">
+        <h5><i class="fa-solid fa-hand-holding-hand" style="color:var(--primary); margin-right:6px;"></i> Immediate Action Needed</h5>
+        <ul id="stop-now"></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="advice-grid">
+    <div class="card advice-card">
+      <h5><i class="fa-solid fa-shield" style="color:var(--primary); margin-right:6px;"></i> Prevention</h5>
+      <ul id="prevent-future"></ul>
+    </div>
+    <div class="card advice-card">
+      <h5><i class="fa-solid fa-arrows-split-up-and-left" style="color:#d97706; margin-right:6px;"></i> Spread Control</h5>
+      <ul id="prevent-spread"></ul>
+    </div>
+    <div class="card advice-card">
+      <h5><i class="fa-solid fa-prescription-bottle-medical" style="color:#2563eb; margin-right:6px;"></i> Treatments</h5>
+      <ul id="treatments"></ul>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% endblock %}
